@@ -4,6 +4,9 @@ nav:
   - Home: index.md
   - Getting Started:
     - Installation: getting-started/installation.md
-  # - User Guide:
-  # - API:
-  - Release Notes: more/release-notes.md
+  - User Guide:
+    - (Coming Soon)
+  - API:
+    - (Coming Soon)
+  - Contributing: contributing.md
+  - Release Notes: release-notes.md
