@@ -1,0 +1,9 @@
+site_name: ZUtils
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+  # - User Guide:
+  # - API:
+  - Release Notes: more/release-notes.md
