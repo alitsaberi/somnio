@@ -74,6 +74,27 @@ You can also run all pre-commit checks manually:
 uv run pre-commit run --all-files
 ```
 
+## Testing
+
+ZUtils uses [pytest](https://docs.pytest.org/) for tests.
+
+### Run tests
+
+```bash
+uv run pytest
+```
+
+### Test conventions
+
+- **Location**: Put tests in `tests/`. Prefer mirroring the source layout (e.g., `src/zutils/foo.py` → `tests/test_foo.py`).
+- **Naming**: Use `test_*.py` files and `test_*` functions. Name tests by behavior (`test_parses_empty_file`) rather than implementation.
+- **Structure**: Use **Arrange–Act–Assert** and keep each test focused on one behavior.
+- **Fixtures**: Prefer `pytest` fixtures for setup/teardown (and reuse). Avoid shared global state between tests.
+- **Isolation**: Tests should be deterministic and run in any order. Avoid network calls and reliance on the local machine/user environment.
+- **I/O**: Use `tmp_path` for filesystem work; don’t write into the repo tree.
+- **Assertions**: Prefer simple `assert` statements; use `pytest.raises(...)` for error cases.
+- **Speed**: Keep unit tests fast; if you add slow/integration tests, document how to run them and register any custom markers in `pyproject.toml`.
+
 ## Documentation
 
 This repo uses MkDocs for documentation.
@@ -86,7 +107,7 @@ uv run mkdocs serve
 
 ### Docstrings
 
-All public modules, functions, classes, and methods should include docstrings. SLUMBER follows the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for docstring formatting.
+All public modules, functions, classes, and methods should include docstrings. ZUtils follows the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for docstring formatting.
 
 Where appropriate, API and reference documentation should be generated automatically using **MkDocstrings**. Auto-generated reference documentation is intended to complement narrative documentation, not replace it.
 

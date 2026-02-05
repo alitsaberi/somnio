@@ -25,6 +25,7 @@ build-backend = "uv_build"
 dev = [
     {include-group = "lint"},
     {include-group = "docs"},
+    {include-group = "test"},
     "pre-commit>=4.5.1",
 ]
 docs = [
@@ -32,6 +33,9 @@ docs = [
 ]
 lint = [
     "ruff>=0.14.14",
+]
+test = [
+    "pytest>=9.0.2",
 ]
 
 [tool.uv.dependency-groups]
