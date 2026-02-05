@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(**)",
+      "Read(**)",
+      "Write(**/.cursor/**)",
+      "Write(**/.github/**)",
+      "Write(**/cursor-code-review.yml)"
+    ],
+    "deny": [
+      "Shell(git push)",
+      "Shell(gh pr create)",
+      "Write(**)"
+    ]
+  }
+}
