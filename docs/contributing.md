@@ -44,6 +44,47 @@ This project follows [GitHub Flow](https://docs.github.com/en/get-started/using-
 - Rebase your branch on the latest `master` when needed to minimize merge conflicts.
 - Make PR titles/descriptions clear and include a brief test plan when relevant.
 
+## Code structure
+
+ZUtils is both a **library** (importable by other Python code) and a **CLI** application.
+
+- **Library code**: `src/zutils/`
+    - Library code should avoid CLI-only dependencies.
+- **CLI code**: `src/zutils/cli/`
+    - `src/zutils/cli/main.py`: Typer `app` and top-level options
+    - `src/zutils/cli/commands/`: one module per subcommand
+
+## Logging
+
+To avoid surprising host applications:
+
+- **Library code uses the standard library `logging` module** (no Loguru imports).
+- **Library code must not configure handlers** (no `basicConfig()`, no global setup).
+- The package installs a `NullHandler()` so importing `zutils` never emits logs by default.
+- The **CLI** uses [Loguru](https://github.com/Delgan/loguru) and configures logging once at startup.
+
+### Writing logs in library modules
+
+Use module-level loggers:
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+logger.info("Something happened")
+```
+
+### Writing logs in CLI code
+
+Use Loguru logger:
+
+```python
+from loguru import logger
+
+logger.info("Something happened")
+```
+
 ## Linting and formatting
 
 ZUtils uses [Ruff](https://docs.astral.sh/ruff/) for both linting and formatting. If you've set up pre-commit hooks, linting and formatting will run automatically before each commit.

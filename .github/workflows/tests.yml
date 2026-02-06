@@ -37,3 +37,35 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
+
+  cli-without-extras:
+    name: CLI without optional deps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install without cli extra
+        run: uv sync --locked
+
+      - name: CLI fails with helpful message
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(uv run zutils 2>&1 || true)"
+          echo "$out"
+          echo "$out" | grep -F "The ZUtils CLI requires optional dependencies."
+          if uv run zutils >/dev/null 2>&1; then
+            echo "Expected zutils to fail without extras, but it succeeded."
+            exit 1
+          fi
