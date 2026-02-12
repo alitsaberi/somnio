@@ -170,3 +170,43 @@ def example_function():
 - Keep pages focused and concise
 - Prefer multiple small pages over one very long page
 - Write in clear, direct language
+
+## TODOs and issue tracking
+
+SLUMBER uses a lightweight convention for TODOs so that follow-up work (docs, tests, refactors, etc.) stays visible and actionable.
+
+- **Source of truth**: Anything non-trivial should be tracked as a **GitHub issue** (use the issue templates when possible).
+- **In-code TODOs**: Allowed. Prefer linking to an issue/ticket for anything that won't be handled immediately.
+- **Author is optional**: You may write `TODO:` or `TODO(name):`.
+
+### TODO format (Python)
+
+Prefer one of these forms:
+
+```python
+# TODO: [tests] Add regression test for empty config.
+
+# TODO(ali): [docs] Explain config precedence.
+```
+
+Notes:
+
+- Use a short tag like `[docs]`, `[tests]`, `[refactor]`, `[logging]`, `[config]` at the start of the description.
+- If applicable, add an issue reference on the next line (URL) or a ticket id like `ABC-123`.
+
+### TODO format (Markdown)
+
+Use HTML comments so TODOs don't render in the docs:
+
+```md
+<!-- TODO: [docs] Add example CLI usage. -->
+```
+
+### Suggested labels
+
+If you maintain labels in the GitHub repo, these tend to work well:
+
+- **Area**: `docs`, `tests`, `cli`, `logging`, `config`
+- **Type**: `bug`, `tech-debt`
+- **Priority**: `priority:high`, `priority:medium`, `priority:low`
+
