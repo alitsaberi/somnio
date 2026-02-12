@@ -54,6 +54,13 @@ dev = {requires-python = ">=3.12"}
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint]
+# Enforce a consistent TODO convention:
+# - Use TODO (not FIXME/XXX)
+# - Keep formatting consistent after `TODO:` / `TODO(name):`
+# Note: We intentionally do NOT require authors (TD002) or issue links (TD003).
+extend-select = ["TD001", "TD007"]
+
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = "dynamic"

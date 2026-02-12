@@ -1,0 +1,71 @@
+name: Task / improvement
+description: Tech debt, refactor, docs work, tests, or general improvements.
+labels: ["tech-debt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for non-bug work: documentation, tests, refactors, cleanup, etc.
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this needed? What problem does it solve?
+      placeholder: Describe the pain point or goal.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / proposed change
+      description: What should change? Any constraints?
+      placeholder: Outline the work at a high level.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What does "done" look like?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: Test plan
+      description: How will we validate the change?
+      placeholder: |
+        - [ ] `uv run pytest`
+        - [ ] Manual check: ...
+    validations:
+      required: false
+  - type: checkboxes
+    id: area
+    attributes:
+      label: Area(s)
+      options:
+        - label: docs
+          required: false
+        - label: tests
+          required: false
+        - label: cli
+          required: false
+        - label: logging
+          required: false
+        - label: config
+          required: false
+        - label: refactor
+          required: false
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - low
+        - medium
+        - high
+    validations:
+      required: false
