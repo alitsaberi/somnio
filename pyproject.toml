@@ -24,6 +24,9 @@ zutils = "zutils.cli.main:app"
 [project.optional-dependencies]
 cli = [
     "loguru>=0.7.3",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "tqdm>=4.67.3",
     "typer>=0.21.1",
 ]
 
@@ -40,6 +43,7 @@ dev = [
 ]
 docs = [
     "mkdocs>=1.6.1",
+    "mkdocs-typer2>=0.2.0",
 ]
 lint = [
     "ruff>=0.14.14",
