@@ -173,7 +173,7 @@ def example_function():
 
 ## TODOs and issue tracking
 
-SLUMBER uses a lightweight convention for TODOs so that follow-up work (docs, tests, refactors, etc.) stays visible and actionable.
+ZUtils uses a lightweight convention for TODOs so that follow-up work (docs, tests, refactors, etc.) stays visible and actionable.
 
 - **Source of truth**: Anything non-trivial should be tracked as a **GitHub issue** (use the issue templates when possible).
 - **In-code TODOs**: Allowed. Prefer linking to an issue/ticket for anything that won't be handled immediately.
