@@ -43,7 +43,9 @@ dev = [
 ]
 docs = [
     "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.0",
     "mkdocs-typer2>=0.2.0",
+    "pymdown-extensions>=10.14.0",
 ]
 lint = [
     "ruff>=0.14.14",

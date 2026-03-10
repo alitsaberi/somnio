@@ -1,8 +1,61 @@
 site_name: ZUtils
+site_description: Python utilities and CLI for sleep and physiological data workflows
+
+repo_url: https://github.com/alitsaberi/zutils
+repo_name: alitsaberi/zutils
+edit_uri: edit/master/docs/
+
+copyright: Copyright &copy; Ali Saberi
 
 plugins:
+  - search
   - mkdocs-typer2:
       pretty: true
+      engine: legacy
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - navigation.expand
+    - navigation.path
+    - toc.follow
+    - content.code.copy
+    - content.tabs.link
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
 
 nav:
   - Home: index.md
