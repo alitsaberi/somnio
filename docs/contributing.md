@@ -25,7 +25,7 @@ cd zutils
 2\. Install dependencies
 
 ```bash
-uv sync
+uv sync --all-groups --all-extras
 ```
 
 3\. Set up pre-commit hooks
