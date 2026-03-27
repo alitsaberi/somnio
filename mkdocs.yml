@@ -64,8 +64,10 @@ nav:
     - CLI: user-guide/cli.md
     - Download NSRR: user-guide/download-nsrr.md
     - Data Types: user-guide/data.md
+    - HDF5 I/O: user-guide/io-hdf5.md
   - Reference:
     - CLI: reference/cli.md
     - Data: reference/data.md
+    - HDF5 I/O: reference/io-hdf5.md
   - Contributing: contributing.md
   - Release Notes: release-notes.md

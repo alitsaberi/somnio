@@ -22,6 +22,7 @@ dependencies = ["numpy>=1.24"]
 zutils = "zutils.cli.main:app"
 
 [project.optional-dependencies]
+hdf5 = ["h5py>=3.8"]
 cli = [
     "loguru>=0.7.3",
     "python-dotenv>=1.0.0",
@@ -52,6 +53,7 @@ lint = [
 ]
 test = [
     "pytest>=9.0.2",
+    "h5py>=3.8",
 ]
 
 [tool.uv.dependency-groups]
