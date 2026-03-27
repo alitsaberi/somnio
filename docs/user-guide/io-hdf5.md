@@ -1,7 +1,7 @@
 # HDF5 I/O
 
 `zutils.io.hdf5` reads and writes `Sample` and `TimeSeries` objects to HDF5 files.
-It owns all serialization logic — data types themselves carry no format knowledge.
+All serialization logic lives here — data types carry no format knowledge.
 
 ## Installation
 
@@ -15,15 +15,13 @@ pip install zutils[hdf5]
 
 ## High-level API
 
-For most use cases `write_hdf5` and `read_hdf5` are all you need.
-
-### Writing
+`write_hdf5` and `read_hdf5` cover most use cases.
 
 ```python
 from pathlib import Path
-from zutils.data import TimeSeries
-from zutils.io.hdf5 import write_hdf5
 import numpy as np
+from zutils.data import TimeSeries
+from zutils.io.hdf5 import write_hdf5, read_hdf5
 
 eeg = TimeSeries(
     values=np.random.randn(256, 2),
@@ -33,29 +31,18 @@ eeg = TimeSeries(
     sample_rate=256.0,
 )
 
-write_hdf5(Path("recording.h5"), {"eeg": eeg})
-```
-
-Each key in the dict becomes a top-level group in the file.
-**An existing file is overwritten.**
-
-### Reading
-
-```python
-from zutils.io.hdf5 import read_hdf5
+write_hdf5(Path("recording.h5"), {"eeg": eeg})   # overwrites if exists
 
 data = read_hdf5(Path("recording.h5"))
-eeg = data["eeg"]          # TimeSeries
-print(eeg.n_samples)       # 256
-print(eeg.sample_rate)     # 256.0
+print(data["eeg"].n_samples)    # 256
+print(data["eeg"].sample_rate)  # 256.0
 ```
 
-`read_hdf5` returns a `dict[str, TimeSeries]`.  `Sample` objects written via
-`write_hdf5` are restored as single-row `TimeSeries` (shape `(1, n_channels)`).
+Each key in the dict becomes a top-level group. `read_hdf5` returns
+`dict[str, TimeSeries]`. `Sample` objects are restored as single-row
+`TimeSeries` (shape `(1, n_channels)`).
 
 ## Storage layout
-
-Each group stores two datasets and three attributes:
 
 ```
 <group_name>/
@@ -68,11 +55,69 @@ Each group stores two datasets and three attributes:
     sample_rate     float          (absent when None / irregular)
 ```
 
-Values are stored in SI base units exactly — no scaling on read or write.
+Values are stored in SI base units — no scaling on read or write.
+
+## `HDF5Format` — format instance
+
+`write_hdf5` / `read_hdf5` are convenience wrappers around `HDF5Format`.
+Use the class directly when you need to configure compression, pass the
+format as a dependency, or subclass for a different HDF5 layout.
+
+```python
+from zutils.io.hdf5 import HDF5Format
+
+fmt = HDF5Format(compression=None)   # disable compression
+fmt.write(path, {"eeg": ts})
+result = fmt.read(path)
+```
+
+`HDF5Format` implements the [`FileFormat`](../reference/io-base.md) protocol,
+so it can be passed anywhere a `FileFormat` is expected:
+
+```python
+from zutils.io import FileFormat
+
+def save(fmt: FileFormat, path: Path, data: dict) -> None:
+    fmt.write(path, data)
+
+save(HDF5Format(), path, {"eeg": ts})
+```
+
+### Custom HDF5 layouts
+
+Subclass `HDF5Format` to implement a different on-disk layout while keeping
+the same interface. For example, a uSleep-style layout stores all channels
+under a single `channels/` group with a global `sample_rate` attribute:
+
+```python
+class USleepHDF5Format(HDF5Format):
+    """uSleep-style HDF5: channels/ group + global sample_rate attribute."""
+
+    def write(self, path: Path, data: dict[str, TimeSeries]) -> None:
+        import h5py
+        path = Path(path)
+        if path.exists():
+            path.unlink()
+        # Validate uniform sample rate
+        rates = {ts.sample_rate for ts in data.values()}
+        if len(rates) != 1 or None in rates:
+            raise ValueError("uSleep format requires a single sample_rate for all channels")
+        sample_rate = rates.pop()
+        with h5py.File(path, "w") as f:
+            f.attrs["sample_rate"] = sample_rate
+            channels = f.create_group("channels")
+            for name, ts in data.items():
+                channels.create_dataset(name, data=ts.values, compression="gzip")
+                channels[name].attrs["units"] = list(ts.units)
+
+    def read(self, path: Path) -> dict[str, TimeSeries]:
+        # TODO: implement read for uSleep layout
+        raise NotImplementedError
+```
 
 ## `serialize` / `deserialize`
 
-Use these when you need to integrate with custom HDF5 layouts.
+Use these when integrating with custom HDF5 files one group at a time.
 
 ```python
 from zutils.io.hdf5 import serialize, deserialize
@@ -84,41 +129,5 @@ datasets, attrs = serialize(ts)
 restored = deserialize(datasets, attrs)
 ```
 
-## Low-level: `HDF5Manager`
-
-`HDF5Manager` provides direct control over HDF5 file operations with
-retry/backoff for file-locking issues (common on Windows network drives).
-
-```python
-from zutils.io.hdf5 import HDF5Manager
-import numpy as np
-
-path = Path("stream.h5")
-
-with HDF5Manager(path, compression="gzip") as mgr:
-    mgr.create_group("eeg", channel_names=["EEG_L", "EEG_R"], units=["V", "V"])
-    mgr.create_dataset(
-        "eeg", "values",
-        data=np.zeros((0, 2), dtype=np.float64),
-        max_shape=(None, 2),
-    )
-    mgr.create_dataset(
-        "eeg", "timestamps",
-        data=np.zeros(0, dtype=np.int64),
-        max_shape=(None,),
-    )
-
-# Stream: append each incoming chunk
-with HDF5Manager(path) as mgr:
-    mgr.append("eeg", "values", chunk_values)       # (n, 2) float64
-    mgr.append("eeg", "timestamps", chunk_stamps)   # (n,)   int64
-```
-
-### Constructor parameters
-
-| Parameter | Default | Description |
-|---|---|---|
-| `file_path` | — | Path to HDF5 file (created if absent) |
-| `compression` | `"gzip"` | Compression filter for new datasets |
-| `max_retries` | `5` | Open attempts before raising `OSError` |
-| `retry_delay` | `0.1` | Initial retry wait in seconds (doubles each attempt) |
+> **Note:** `HDF5Manager` (real-time append-while-recording) is a slumber
+> concern and will live in `slumber.ext.units.storage`, not in zutils.
