@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: io-protocols
     content: Define SignalReader/Writer and AnnotationReader/Writer protocols in zutils.io.base
-    status: pending
+    status: completed
   - id: io-hdf5
     content: Implement HDF5 native and usleep layout readers/writers
     status: pending
