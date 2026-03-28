@@ -1,5 +1,6 @@
 site_name: Somnio
 site_description: Python utilities and CLI for sleep and physiological data workflows
+site_url: https://alitsaberi.github.io/somnio/
 
 repo_url: https://github.com/alitsaberi/somnio
 repo_name: alitsaberi/somnio

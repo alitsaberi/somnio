@@ -1,22 +1,44 @@
 [project]
 name = "somnio"
 version = "0.1.0"
-description = ""
+description = "Python library and CLI for sleep and physiological data workflows."
 readme = "README.md"
 authors = [
     { name = "Ali Saberi", email = "ali.saberi96@gmail.com" }
 ]
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
+keywords = [
+    "sleep",
+    "physiology",
+    "polysomnography",
+    "hdf5",
+    "eeg",
+    "biosignals",
+    "neuroscience",
+    "zmax"
+]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
 ]
 dependencies = ["numpy>=1.24"]
+
+[project.urls]
+Homepage = "https://github.com/alitsaberi/somnio"
+Repository = "https://github.com/alitsaberi/somnio"
+Documentation = "https://alitsaberi.github.io/somnio/"
+Issues = "https://github.com/alitsaberi/somnio/issues"
 
 [project.scripts]
 somnio = "somnio.cli.main:app"
