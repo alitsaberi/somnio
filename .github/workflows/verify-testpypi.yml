@@ -1,0 +1,26 @@
+name: Verify TestPyPI install
+
+# Re-run after publishing to TestPyPI: installs only from TestPyPI (deps from PyPI)
+# per https://packaging.python.org/guides/using-testpypi/
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install somnio from TestPyPI
+        run: |
+          uv venv .venv-verify
+          uv pip install --python .venv-verify/bin/python \
+            --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple/ \
+            'somnio[cli]'
+
+      - name: Import and CLI smoke test
+        run: |
+          .venv-verify/bin/python -c "import somnio; print('import ok')"
+          .venv-verify/bin/somnio --help

@@ -136,6 +136,33 @@ uv run pytest
 - **Assertions**: Prefer simple `assert` statements; use `pytest.raises(...)` for error cases.
 - **Speed**: Keep unit tests fast; if you add slow/integration tests, document how to run them and register any custom markers in `pyproject.toml`.
 
+## Releases
+
+Somnio uses **semantic versioning** (`MAJOR.MINOR.PATCH`). Breaking API or behavior changes increment **MAJOR**; backward-compatible additions increment **MINOR**; backward-compatible fixes increment **PATCH**. Pre-releases may use suffixes such as `a1`, `b1`, `rc1` on the version string in `pyproject.toml`.
+
+### Changelog
+
+User-facing changes for each version belong in the root [**CHANGELOG.md**](https://github.com/alitsaberi/somnio/blob/master/CHANGELOG.md). Before tagging a release, add a dated section for the new version (move items out of **Unreleased** when you cut the release).
+
+### Git tags and PyPI
+
+1. Set `version` in `pyproject.toml` to the release you are shipping (or run `uv version <x.y.z>`).
+2. Commit the version bump and changelog updates on `master` (or your release branch, then merge).
+3. Create an **annotated** tag whose name is `v` plus the same version string, for example `v0.2.0`:
+
+   ```bash
+   git tag -a v0.2.0 -m "v0.2.0"
+   git push origin v0.2.0
+   ```
+
+   The tag name without the leading `v` **must** match `project.version` in `pyproject.toml`, or the [Publish to PyPI](https://github.com/alitsaberi/somnio/blob/master/.github/workflows/publish-pypi.yml) workflow will fail.
+
+4. [GitHub Actions](https://docs.github.com/en/actions) builds the sdist and wheel, runs tests, and runs `uv publish` to **PyPI** using **Trusted Publishing** (OIDC). No long-lived API token is stored in the repository; configure the trusted publisher and environment once as described in the workflow file comments.
+
+### GitHub Release notes
+
+When you publish a tag, create a [**GitHub Release**](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) for that tag. Use the release description as the human-readable announcement: you can paste or summarize the corresponding **CHANGELOG.md** section so subscribers see highlights in their feed.
+
 ## Documentation
 
 This repo uses MkDocs for documentation.
