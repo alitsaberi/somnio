@@ -1,2 +1,2 @@
-def test_import_zutils() -> None:
-    import zutils  # noqa: F401
+def test_import_somnio() -> None:
+    import somnio  # noqa: F401

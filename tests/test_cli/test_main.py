@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from zutils.cli.main import create_app
+from somnio.cli.main import create_app
 from loguru import logger
 
 

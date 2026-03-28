@@ -1,4 +1,4 @@
-"""ZUtils CLI app.
+"""Somnio CLI app.
 
 This module is the console entry point target.
 """

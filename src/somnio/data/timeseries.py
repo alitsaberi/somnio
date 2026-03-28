@@ -2,7 +2,7 @@
 
 Pure containers — no I/O, no logging, no serialization format knowledge.
 
-Conventions (authoritative for all of zutils):
+Conventions (authoritative for all of somnio):
 - Timestamps: int64 nanoseconds since Unix epoch (1970-01-01T00:00:00 UTC).
 - Values dtype: float64.
 - Physical units: SI base units tracked per-channel via ``units`` field.

@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from zutils.data.annotations import Epochs, Event
-from zutils.data.timeseries import TimeSeries
+from somnio.data.annotations import Epochs, Event
+from somnio.data.timeseries import TimeSeries
 
 
 class SignalReader(Protocol):
