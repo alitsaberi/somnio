@@ -37,7 +37,7 @@ todos:
     status: pending
   - id: devices-zmax
     content: Port ZMax TCP driver into zutils.devices.zmax
-    status: pending
+    status: completed
 isProject: false
 ---
 
