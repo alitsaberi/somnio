@@ -9,10 +9,10 @@ API reference for `zutils.data`.
 ```python
 @dataclass
 class Sample:
-    values: np.ndarray        # (n_channels,) float64
-    timestamp: int            # ns since Unix epoch
-    channel_names: list[str]  # unique, length == n_channels
-    units: list[str]          # SI symbols, length == n_channels
+    values: np.ndarray          # (n_channels,) float64
+    timestamp: int              # ns since Unix epoch
+    channel_names: tuple[str, ...]  # unique, length == n_channels
+    units: tuple[str, ...]      # SI symbols, length == n_channels
 ```
 
 Single time-point, multi-channel measurement. Lightweight type for streaming through ezmsg DAGs (one sample per message).
@@ -31,14 +31,14 @@ Single time-point, multi-channel measurement. Lightweight type for streaming thr
 ```python
 @dataclass
 class TimeSeries:
-    values: np.ndarray        # (n_samples, n_channels) float64
-    timestamps: np.ndarray    # (n_samples,) int64 ns since Unix epoch
-    channel_names: list[str]  # unique, length == n_channels
-    units: list[str]          # SI symbols, length == n_channels
-    sample_rate: float | None = None  # Hz; None = irregular
+    values: np.ndarray              # (n_samples, n_channels) float64
+    timestamps: np.ndarray          # (n_samples,) int64 ns since Unix epoch
+    channel_names: tuple[str, ...]  # unique, length == n_channels
+    units: tuple[str, ...]          # SI symbols, length == n_channels
+    sample_rate: float | None = None  # nominal Hz when regular; None = irregular/unknown
 ```
 
-Timestamp-first multi-channel timeseries. Supports irregular sampling natively; regular sampling is expressed via optional `sample_rate` metadata.
+Timestamp-first multi-channel timeseries. Supports irregular sampling natively. When `sample_rate` is set, it denotes **nominal** regular sampling; timestamps are **not** auto-adjusted to match. Strict grids for a given file format are enforced in that format’s writer (see [I/O reference](io.md)).
 
 **Validation** (`__post_init__`):
 

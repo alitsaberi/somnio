@@ -28,6 +28,14 @@ For CLI support:
 pip install zutils[cli]
 ```
 
+For HDF5 signal layouts (`zutils.io.hdf5`, native and USleep formats):
+
+```bash
+uv add zutils[hdf5]
+# or
+pip install zutils[hdf5]
+```
+
 ### Verify installation
 
 If you installed the CLI extra, confirm it works:

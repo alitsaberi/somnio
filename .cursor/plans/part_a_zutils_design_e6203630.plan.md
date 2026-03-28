@@ -10,7 +10,7 @@ todos:
     status: pending
   - id: io-hdf5
     content: Implement HDF5 native and usleep layout readers/writers
-    status: pending
+    status: completed
   - id: io-edf
     content: Implement EDF standard and zmax-multi layout readers/writers
     status: pending
