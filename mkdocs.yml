@@ -1,8 +1,8 @@
-site_name: ZUtils
+site_name: Somnio
 site_description: Python utilities and CLI for sleep and physiological data workflows
 
-repo_url: https://github.com/alitsaberi/zutils
-repo_name: alitsaberi/zutils
+repo_url: https://github.com/alitsaberi/somnio
+repo_name: alitsaberi/somnio
 edit_uri: edit/master/docs/
 
 copyright: Copyright &copy; Ali Saberi

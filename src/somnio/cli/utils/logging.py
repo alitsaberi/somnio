@@ -1,4 +1,4 @@
-"""Logging utilities for the zutils CLI.
+"""Logging utilities for the somnio CLI.
 
 This module configures Loguru as the primary logger and bridges standard-library
 ``logging`` records into Loguru.

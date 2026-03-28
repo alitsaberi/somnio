@@ -5,7 +5,7 @@ Download files from a dataset on the [National Sleep Research Resource (NSRR)](h
 ## Synopsis
 
 ```bash
-zutils download-nsrr SLUG OUTPUT_DIR [OPTIONS]
+somnio download-nsrr SLUG OUTPUT_DIR [OPTIONS]
 ```
 
 See [CLI](../reference/cli.md) for the full reference.
@@ -23,8 +23,8 @@ See [CLI](../reference/cli.md) for the full reference.
 
 Files are placed under `OUTPUT_DIR/SLUG/`. If you use `--path`, only that subpath is created. For example:
 
-- `zutils download-nsrr sof ./data ...` → `./data/sof/...`
-- `zutils download-nsrr shhs ./data --path polysomnography ...` → `./data/shhs/polysomnography/...`
+- `somnio download-nsrr sof ./data ...` → `./data/sof/...`
+- `somnio download-nsrr shhs ./data --path polysomnography ...` → `./data/shhs/polysomnography/...`
 
 ## Examples
 
@@ -33,7 +33,7 @@ Files are placed under `OUTPUT_DIR/SLUG/`. If you use `--path`, only that subpat
 Download the full **SOF** dataset into `./data`:
 
 ```bash
-zutils download-nsrr sof ./data --token YOUR_NSRR_TOKEN
+somnio download-nsrr sof ./data --token YOUR_NSRR_TOKEN
 ```
 
 ### Single subpath
@@ -41,7 +41,7 @@ zutils download-nsrr sof ./data --token YOUR_NSRR_TOKEN
 Download only the `polysomnography` folder from **SHHS**:
 
 ```bash
-zutils download-nsrr shhs ./data --path polysomnography --token YOUR_NSRR_TOKEN
+somnio download-nsrr shhs ./data --path polysomnography --token YOUR_NSRR_TOKEN
 ```
 
 ### Using the environment for the token
@@ -50,7 +50,7 @@ Avoid putting the token on the command line by setting `NSRR_TOKEN` (e.g. in `.e
 
 ```bash
 export NSRR_TOKEN=your_token_here
-zutils download-nsrr sof ./data
+somnio download-nsrr sof ./data
 ```
 
 ### Longer timeout and file logging
@@ -58,7 +58,7 @@ zutils download-nsrr sof ./data
 Use a 10-minute timeout and write logs to the default `logs/` file:
 
 ```bash
-zutils -l download-nsrr mesa ./datasets --token YOUR_NSRR_TOKEN --timeout-seconds 600
+somnio -l download-nsrr mesa ./datasets --token YOUR_NSRR_TOKEN --timeout-seconds 600
 ```
 
 ### Custom log file
@@ -66,7 +66,7 @@ zutils -l download-nsrr mesa ./datasets --token YOUR_NSRR_TOKEN --timeout-second
 Send debug logs to a specific file for later inspection:
 
 ```bash
-zutils --log-file ./nsrr-debug.log download-nsrr shhs ./data --token YOUR_NSRR_TOKEN
+somnio --log-file ./nsrr-debug.log download-nsrr shhs ./data --token YOUR_NSRR_TOKEN
 ```
 
 ### Retries and timeouts

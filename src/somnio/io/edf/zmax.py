@@ -8,10 +8,10 @@ from typing import Any, Sequence
 
 import numpy as np
 
-from zutils.data.adapters.mne import from_mne_raw, import_mne, to_mne_raw
-from zutils.data.timeseries import TimeSeries
+from somnio.data.adapters.mne import from_mne_raw, import_mne, to_mne_raw
+from somnio.data.timeseries import TimeSeries
 
-from zutils.io.edf.utils import (
+from somnio.io.edf.utils import (
     ensure_export_edf_deps,
     require_edf_compatible_timestamps,
 )
@@ -47,13 +47,13 @@ def read(
     verbose: str | bool | None = "ERROR",
     units: dict[str, str] | str | None = None,
 ) -> TimeSeries:
-    """Load per-channel EDF files from a directory into one :class:`~zutils.data.timeseries.TimeSeries`.
+    """Load per-channel EDF files from a directory into one :class:`~somnio.data.timeseries.TimeSeries`.
 
     Discovers ``*.edf`` files under ``path`` (sorted by stem) when ``stems`` is
     omitted. When ``stems`` is set, loads ``{stem}.edf`` for each entry in that
     order; every file must exist.
 
-    By default the :class:`~zutils.data.timeseries.TimeSeries` channel name for each
+    By default the :class:`~somnio.data.timeseries.TimeSeries` channel name for each
     file is the filename stem (verbatim). Use ``stem_aliases`` to rename: keys are
     stems as on disk, values are the channel names to use.
 
@@ -139,7 +139,7 @@ def write(
     overwrite: bool = False,
     verbose: str | bool | None = None,
 ) -> None:
-    """Write one single-channel EDF per :class:`~zutils.data.timeseries.TimeSeries` column.
+    """Write one single-channel EDF per :class:`~somnio.data.timeseries.TimeSeries` column.
 
     Each file is named ``{stem}.edf`` where ``stem`` defaults to the channel name
     (verbatim). Use ``channel_to_stem`` to override: keys are ``TimeSeries``

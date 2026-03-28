@@ -1,11 +1,11 @@
-"""Tests for zutils.data.timeseries — Sample, TimeSeries, concat, collect_samples."""
+"""Tests for somnio.data.timeseries — Sample, TimeSeries, concat, collect_samples."""
 
 from datetime import timedelta
 
 import numpy as np
 import pytest
 
-from zutils.data import Sample, TimeSeries, collect_samples, concat
+from somnio.data import Sample, TimeSeries, collect_samples, concat
 
 
 def make_ts(

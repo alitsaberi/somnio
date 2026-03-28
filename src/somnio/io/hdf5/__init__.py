@@ -1,6 +1,6 @@
 """HDF5 signal I/O layouts (requires optional ``hdf5`` dependency)."""
 
-from zutils.io.hdf5.native import (
+from somnio.io.hdf5.native import (
     NativeHDF5Reader,
     NativeHDF5Writer,
     deserialize,
@@ -9,7 +9,7 @@ from zutils.io.hdf5.native import (
     serialize,
     write,
 )
-from zutils.io.hdf5.usleep import (
+from somnio.io.hdf5.usleep import (
     USleepHDF5Reader,
     USleepHDF5Writer,
     align_timestamps_to_usleep_grid,
