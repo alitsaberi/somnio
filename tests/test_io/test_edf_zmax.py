@@ -11,8 +11,8 @@ import pytest
 pytest.importorskip("mne")
 pytest.importorskip("edfio")
 
-from zutils.data.timeseries import TimeSeries  # noqa: E402
-from zutils.io.edf import zmax  # noqa: E402
+from somnio.data.timeseries import TimeSeries  # noqa: E402
+from somnio.io.edf import zmax  # noqa: E402
 
 
 def _ts_two(

@@ -1,7 +1,7 @@
 # Data Types
 
-`zutils.data` provides two pure in-memory containers for sleep and physiological signals.
-They carry no I/O or serialization logic — see the [I/O reference](../reference/io.md) for HDF5 layouts and `zutils.io.base` protocols.
+`somnio.data` provides two pure in-memory containers for sleep and physiological signals.
+They carry no I/O or serialization logic — see the [I/O reference](../reference/io.md) for HDF5 layouts and `somnio.io.base` protocols.
 
 ## Core types
 
@@ -12,7 +12,7 @@ They carry no I/O or serialization logic — see the [I/O reference](../referenc
 
 ## Conventions
 
-All values and metadata follow these rules throughout zutils:
+All values and metadata follow these rules throughout somnio:
 
 - **Timestamps** — `int64` nanoseconds since Unix epoch (`time.time_ns()`).
 - **Values** — always `float64`; integer sensors are cast on construction.
@@ -28,7 +28,7 @@ All values and metadata follow these rules throughout zutils:
 
 ```python
 import numpy as np
-from zutils.data import Sample
+from somnio.data import Sample
 
 sample = Sample(
     values=np.array([0.000123, -0.000045, 9.81, 0.0, 0.12, 36.5]),
@@ -44,7 +44,7 @@ sample = Sample(
 
 ```python
 import numpy as np
-from zutils.data import TimeSeries
+from somnio.data import TimeSeries
 
 n_samples = 256  # 1 second at 256 Hz
 step_ns = int(1e9 / 256)
@@ -87,7 +87,7 @@ single    = ts[42]     # TimeSeries with 1 sample
 ## Concatenating `TimeSeries` objects
 
 ```python
-from zutils.data import concat
+from somnio.data import concat
 
 combined = concat([ts_a, ts_b, ts_c])
 ```
@@ -98,7 +98,7 @@ combined = concat([ts_a, ts_b, ts_c])
 ## Building a `TimeSeries` from `Sample` objects
 
 ```python
-from zutils.data import collect_samples
+from somnio.data import collect_samples
 
 samples = [
     Sample(values=np.array([v, -v]), timestamp=i * step_ns,

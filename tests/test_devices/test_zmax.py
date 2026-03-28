@@ -8,14 +8,14 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from zutils.data.timeseries import Sample
-from zutils.devices.zmax import (
+from somnio.data.timeseries import Sample
+from somnio.devices.zmax import (
     ConnectionClosedError,
     DataType,
     ZMax,
 )
-from zutils.devices.zmax.enums import DongleStatus, LEDColor, scale_eeg
-from zutils.devices.zmax.protocol import dec2hex, get_byte_at, get_word_at
+from somnio.devices.zmax.enums import DongleStatus, LEDColor, scale_eeg
+from somnio.devices.zmax.protocol import dec2hex, get_byte_at, get_word_at
 
 
 # ---------------------------------------------------------------------------
@@ -343,7 +343,7 @@ def test_stimulate_sends_correct_command(mock_socket):
 def test_stimulate_sequential_validates_off_duration_before_sleep(mock_socket):
     """Invalid ``off_duration`` must fail with ValueError before ``sleep`` runs."""
     zmax = ZMax("127.0.0.1", 8080)
-    with patch("zutils.devices.zmax.client.sleep") as mock_sleep:
+    with patch("somnio.devices.zmax.client.sleep") as mock_sleep:
         with pytest.raises(ValueError, match="Off duration"):
             zmax.stimulate_sequential(
                 LEDColor.RED,
@@ -413,14 +413,14 @@ def test_protocol_dec2hex():
 
 def test_expected_data_length_matches_min():
     """EXPECTED_DATA_LENGTH is an alias for MIN_DATA_LENGTH."""
-    from zutils.devices.zmax.constants import EXPECTED_DATA_LENGTH, MIN_DATA_LENGTH
+    from somnio.devices.zmax.constants import EXPECTED_DATA_LENGTH, MIN_DATA_LENGTH
 
     assert EXPECTED_DATA_LENGTH == MIN_DATA_LENGTH
 
 
 def test_ensure_connected_raises_when_disconnected(mock_socket):
     """ensure_connected raises ValueError when the device is not connected."""
-    from zutils.devices.zmax import ensure_connected
+    from somnio.devices.zmax import ensure_connected
 
     mock_socket.return_value.getpeername.side_effect = OSError()
     zmax = ZMax("127.0.0.1", 8080)
@@ -431,7 +431,7 @@ def test_ensure_connected_raises_when_disconnected(mock_socket):
 
 def test_ensure_connected_returns_zmax_when_connected(mock_socket):
     """ensure_connected returns the ZMax instance when connected."""
-    from zutils.devices.zmax import ensure_connected
+    from somnio.devices.zmax import ensure_connected
 
     mock_socket.return_value.getpeername.return_value = ("127.0.0.1", 8080)
     zmax = ZMax("127.0.0.1", 8080)

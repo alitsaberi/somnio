@@ -1,7 +1,7 @@
 # CLI Reference
 
 ::: mkdocs-typer2
-    :module: zutils.cli.main
-    :name: zutils
+    :module: somnio.cli.main
+    :name: somnio
     :engine: native
     :pretty: true

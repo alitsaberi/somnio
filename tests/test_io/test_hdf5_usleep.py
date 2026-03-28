@@ -6,12 +6,12 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from zutils.data.timeseries import TimeSeries
+from somnio.data.timeseries import TimeSeries
 
 pytest.importorskip("h5py")
 
 import h5py  # noqa: E402
-from zutils.io.hdf5 import usleep  # noqa: E402
+from somnio.io.hdf5 import usleep  # noqa: E402
 
 
 def _regular_ts(

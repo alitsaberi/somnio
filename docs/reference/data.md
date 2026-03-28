@@ -1,6 +1,6 @@
 # Data Reference
 
-API reference for `zutils.data`.
+API reference for `somnio.data`.
 
 ---
 
@@ -122,7 +122,7 @@ Batch a sequence of `Sample` objects into a `TimeSeries`.
 
 ## MNE adapter (optional)
 
-Module: `zutils.data.adapters.mne` (requires **`zutils[edf]`** or **`mne`** installed).
+Module: `somnio.data.adapters.mne` (requires **`somnio[edf]`** or **`mne`** installed).
 
 | Function | Purpose |
 |----------|---------|
@@ -130,4 +130,4 @@ Module: `zutils.data.adapters.mne` (requires **`zutils[edf]`** or **`mne`** inst
 | `to_mne_raw(data)` | Build `RawArray` from `TimeSeries` (`sample_rate` required; `meas_date` from the first timestamp). |
 | `import_mne()` | Return the `mne` module or raise with an install hint. |
 
-The [EDF I/O reference](io.md#optional-dependency-edf) uses these helpers for all EDF layouts. They are the single implementation for MNE ↔ `TimeSeries` conversion in zutils.
+The [EDF I/O reference](io.md#optional-dependency-edf) uses these helpers for all EDF layouts. They are the single implementation for MNE ↔ `TimeSeries` conversion in somnio.

@@ -1,19 +1,19 @@
-# ZUtils
+# Somnio
 
 Python library and CLI for sleep and physiological data workflows.
 
 ## Install
 
 ```bash
-pip install zutils
+pip install somnio
 ```
 
 Optional extras:
 
-- `zutils[cli]` — command-line tools
-- `zutils[hdf5]` — `zutils.io.hdf5` layouts (requires [h5py](https://www.h5py.org/))
+- `somnio[cli]` — command-line tools
+- `somnio[hdf5]` — `somnio.io.hdf5` layouts (requires [h5py](https://www.h5py.org/))
 
-With **uv**: `uv add zutils`, `uv add zutils[cli]`, or `uv add zutils[hdf5]`.
+With **uv**: `uv add somnio`, `uv add somnio[cli]`, or `uv add somnio[hdf5]`.
 
 ## Documentation
 

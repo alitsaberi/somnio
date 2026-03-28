@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from zutils.data.adapters.mne import from_mne_raw, import_mne, to_mne_raw
-from zutils.data.timeseries import TimeSeries
+from somnio.data.adapters.mne import from_mne_raw, import_mne, to_mne_raw
+from somnio.data.timeseries import TimeSeries
 
-from zutils.io.edf.utils import (
+from somnio.io.edf.utils import (
     ensure_export_edf_deps,
     require_edf_compatible_timestamps,
 )
@@ -21,7 +21,7 @@ def read(
     verbose: str | bool | None = "ERROR",
     units: dict[str, str] | str | None = None,
 ) -> TimeSeries:
-    """Load one multiplexed EDF (+/BDF) file into a :class:`~zutils.data.timeseries.TimeSeries`.
+    """Load one multiplexed EDF (+/BDF) file into a :class:`~somnio.data.timeseries.TimeSeries`.
 
     Uses :func:`mne.io.read_raw_edf`. Channel names are normalized (spaces → underscores).
     Physical scaling follows MNE (data returned in SI, e.g. Volts for EEG).

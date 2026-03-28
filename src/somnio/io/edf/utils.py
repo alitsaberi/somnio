@@ -1,12 +1,12 @@
-"""Internal helpers for ``zutils.io.edf``: export dependency checks and EDF header rules."""
+"""Internal helpers for ``somnio.io.edf``: export dependency checks and EDF header rules."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from zutils.data.timeseries import TimeSeries
+from somnio.data.timeseries import TimeSeries
 
-from zutils.data.adapters.mne import import_mne
+from somnio.data.adapters.mne import import_mne
 
 
 def require_edf_compatible_timestamps(data: TimeSeries) -> None:
@@ -32,5 +32,5 @@ def ensure_export_edf_deps() -> None:
         import edfio  # noqa: F401
     except ImportError as exc:  # pragma: no cover - import guard
         raise ImportError(
-            "Exporting EDF requires edfio. Install with: pip install zutils[edf]"
+            "Exporting EDF requires edfio. Install with: pip install somnio[edf]"
         ) from exc

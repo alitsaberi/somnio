@@ -1,6 +1,6 @@
-# I/O reference (`zutils.io`)
+# I/O reference (`somnio.io`)
 
-Signal formats are organized under `zutils.io` using small **layout modules**. Optional backends (**HDF5**, **EDF**) require extra dependencies.
+Signal formats are organized under `somnio.io` using small **layout modules**. Optional backends (**HDF5**, **EDF**) require extra dependencies.
 
 ---
 
@@ -9,15 +9,15 @@ Signal formats are organized under `zutils.io` using small **layout modules**. O
 Install **h5py** via the project extra:
 
 ```bash
-uv add zutils[hdf5]
+uv add somnio[hdf5]
 # or
-pip install zutils[hdf5]
+pip install somnio[hdf5]
 ```
 
-Import layout helpers from the package (not the top-level `zutils` namespace):
+Import layout helpers from the package (not the top-level `somnio` namespace):
 
 ```python
-from zutils.io.hdf5 import (
+from somnio.io.hdf5 import (
     read,
     read_all,
     write,
@@ -29,11 +29,11 @@ from zutils.io.hdf5 import (
 )
 ```
 
-Protocols `SignalReader`, `SignalWriter`, and annotation I/O protocols live in `zutils.io.base`.
+Protocols `SignalReader`, `SignalWriter`, and annotation I/O protocols live in `somnio.io.base`.
 
 ---
 
-## Native zutils HDF5 (`zutils.io.hdf5.native`)
+## Native somnio HDF5 (`somnio.io.hdf5.native`)
 
 **Use case:** one HDF5 file with one or more groups, each holding a full `TimeSeries` (values + per-sample timestamps).
 
@@ -63,7 +63,7 @@ For group `{name}`:
 
 ---
 
-## USleep / zmax-datasets HDF5 (`zutils.io.hdf5.usleep`)
+## USleep / zmax-datasets HDF5 (`somnio.io.hdf5.usleep`)
 
 **Use case:** interchange with USleep-style exports: one sample rate for the whole file, no per-sample timestamps stored.
 
@@ -112,17 +112,17 @@ Per-channel **`sample_rate`** on legacy or third-party files is **ignored**; onl
 Install **MNE** and **edfio** via the project extra:
 
 ```bash
-uv add zutils[edf]
+uv add somnio[edf]
 # or
-pip install zutils[edf]
+pip install somnio[edf]
 ```
 
-Reading uses MNE; writing multiplexed or per-channel EDF uses MNE’s exporter (`edfio` for `.edf`). Conversion between MNE `Raw` and `TimeSeries` is centralized in [`zutils.data.adapters.mne`](data.md#mne-adapter-optional).
+Reading uses MNE; writing multiplexed or per-channel EDF uses MNE’s exporter (`edfio` for `.edf`). Conversion between MNE `Raw` and `TimeSeries` is centralized in [`somnio.data.adapters.mne`](data.md#mne-adapter-optional).
 
-Import layout entry points from `zutils.io.edf`:
+Import layout entry points from `somnio.io.edf`:
 
 ```python
-from zutils.io.edf import (
+from somnio.io.edf import (
     read_standard,
     write_standard,
     read_zmax_multi,
@@ -142,7 +142,7 @@ from zutils.io.edf import (
 
 ---
 
-## Standard multiplexed EDF (`zutils.io.edf.standard`)
+## Standard multiplexed EDF (`somnio.io.edf.standard`)
 
 **Use case:** one file containing multiple channels (classic EDF/BDF as loaded by MNE).
 
@@ -151,13 +151,13 @@ from zutils.io.edf import (
 | `read_standard(path, preload=..., verbose=..., units=...)` | Load file → `TimeSeries` via `mne.io.read_raw_edf` and `from_mne_raw` |
 | `write_standard(path, data, overwrite=..., verbose=...)` | `TimeSeries` → EDF via `to_mne_raw` and `mne.export.export_raw` |
 
-Channel labels from the file are normalized for zutils (**spaces → underscores**) inside the MNE adapter. Physical units follow MNE (e.g. EEG in **volts**). Optional `units=` is forwarded to `read_raw_edf` when channel units are missing in the file.
+Channel labels from the file are normalized for somnio (**spaces → underscores**) inside the MNE adapter. Physical units follow MNE (e.g. EEG in **volts**). Optional `units=` is forwarded to `read_raw_edf` when channel units are missing in the file.
 
 **Protocol wrappers:** `StandardEDFReader`, `StandardEDFWriter`.
 
 ---
 
-## Per-channel directory EDF — ZMax-style (`zutils.io.edf.zmax`)
+## Per-channel directory EDF — ZMax-style (`somnio.io.edf.zmax`)
 
 **Use case:** a **directory** of single-channel EDF files, e.g. `EEG L.edf`, `dX.edf`, one channel per file (common for some wearable / export pipelines).
 

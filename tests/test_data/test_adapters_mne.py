@@ -9,8 +9,8 @@ import pytest
 
 pytest.importorskip("mne")
 
-from zutils.data.adapters import mne as mne_adapt  # noqa: E402
-from zutils.data.timeseries import TimeSeries  # noqa: E402
+from somnio.data.adapters import mne as mne_adapt  # noqa: E402
+from somnio.data.timeseries import TimeSeries  # noqa: E402
 
 
 def test_to_mne_raw_allows_pre_edf_epoch_timestamps() -> None:

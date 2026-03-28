@@ -1,12 +1,12 @@
 """EDF signal I/O layouts (optional ``edf`` extra: MNE + edfio)."""
 
-from zutils.io.edf.standard import (
+from somnio.io.edf.standard import (
     StandardEDFReader,
     StandardEDFWriter,
     read as read_standard,
     write as write_standard,
 )
-from zutils.io.edf.zmax import (
+from somnio.io.edf.zmax import (
     ZMaxMultiEDFReader,
     ZMaxMultiEDFWriter,
     read as read_zmax_multi,

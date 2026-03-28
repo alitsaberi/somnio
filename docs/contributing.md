@@ -1,6 +1,6 @@
-# Contributing to ZUtils
+# Contributing to Somnio
 
-Thanks for helping improve **ZUtils**. Contributions are welcome, including:
+Thanks for helping improve **Somnio**. Contributions are welcome, including:
 
 - Code changes via pull requests
 - Documentation improvements
@@ -10,7 +10,7 @@ Thanks for helping improve **ZUtils**. Contributions are welcome, including:
 
 ### Prerequisites
 
-- **Python**: ZUtils supports Python **3.10+**; for local development we recommend **Python 3.12+**.
+- **Python**: Somnio supports Python **3.10+**; for local development we recommend **Python 3.12+**.
 - **uv**: Install the [uv](https://docs.astral.sh/uv/) package manager.
 
 ### Installation
@@ -18,8 +18,8 @@ Thanks for helping improve **ZUtils**. Contributions are welcome, including:
 1\. Clone the repository
 
 ```bash
-git clone https://github.com/alitsaberi/zutils.git
-cd zutils
+git clone https://github.com/alitsaberi/somnio.git
+cd somnio
 ```
 
 2\. Install dependencies
@@ -46,13 +46,13 @@ This project follows [GitHub Flow](https://docs.github.com/en/get-started/using-
 
 ## Code structure
 
-ZUtils is both a **library** (importable by other Python code) and a **CLI** application.
+Somnio is both a **library** (importable by other Python code) and a **CLI** application.
 
-- **Library code**: `src/zutils/`
+- **Library code**: `src/somnio/`
     - Library code should avoid CLI-only dependencies.
-- **CLI code**: `src/zutils/cli/`
-    - `src/zutils/cli/main.py`: Typer `app` and top-level options
-    - `src/zutils/cli/commands/`: one module per subcommand
+- **CLI code**: `src/somnio/cli/`
+    - `src/somnio/cli/main.py`: Typer `app` and top-level options
+    - `src/somnio/cli/commands/`: one module per subcommand
 
 ## Logging
 
@@ -60,7 +60,7 @@ To avoid surprising host applications:
 
 - **Library code uses the standard library `logging` module** (no Loguru imports).
 - **Library code must not configure handlers** (no `basicConfig()`, no global setup).
-- The package installs a `NullHandler()` so importing `zutils` never emits logs by default.
+- The package installs a `NullHandler()` so importing `somnio` never emits logs by default.
 - The **CLI** uses [Loguru](https://github.com/Delgan/loguru) and configures logging once at startup.
 
 ### Writing logs in library modules
@@ -87,7 +87,7 @@ logger.info("Something happened")
 
 ## Linting and formatting
 
-ZUtils uses [Ruff](https://docs.astral.sh/ruff/) for both linting and formatting. If you've set up pre-commit hooks, linting and formatting will run automatically before each commit.
+Somnio uses [Ruff](https://docs.astral.sh/ruff/) for both linting and formatting. If you've set up pre-commit hooks, linting and formatting will run automatically before each commit.
 
 ### Run the linter
 
@@ -117,7 +117,7 @@ uv run pre-commit run --all-files
 
 ## Testing
 
-ZUtils uses [pytest](https://docs.pytest.org/) for tests.
+Somnio uses [pytest](https://docs.pytest.org/) for tests.
 
 ### Run tests
 
@@ -127,7 +127,7 @@ uv run pytest
 
 ### Test conventions
 
-- **Location**: Put tests in `tests/`. Prefer mirroring the source layout (e.g., `src/zutils/foo.py` → `tests/test_foo.py`).
+- **Location**: Put tests in `tests/`. Prefer mirroring the source layout (e.g., `src/somnio/foo.py` → `tests/test_foo.py`).
 - **Naming**: Use `test_*.py` files and `test_*` functions. Name tests by behavior (`test_parses_empty_file`) rather than implementation.
 - **Structure**: Use **Arrange–Act–Assert** and keep each test focused on one behavior.
 - **Fixtures**: Prefer `pytest` fixtures for setup/teardown (and reuse). Avoid shared global state between tests.
@@ -148,7 +148,7 @@ uv run mkdocs serve
 
 ### Docstrings
 
-All public modules, functions, classes, and methods should include docstrings. ZUtils follows the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for docstring formatting.
+All public modules, functions, classes, and methods should include docstrings. Somnio follows the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for docstring formatting.
 
 Where appropriate, API and reference documentation should be generated automatically using **MkDocstrings**. Auto-generated reference documentation is intended to complement narrative documentation, not replace it.
 
@@ -173,7 +173,7 @@ def example_function():
 
 ## TODOs and issue tracking
 
-ZUtils uses a lightweight convention for TODOs so that follow-up work (docs, tests, refactors, etc.) stays visible and actionable.
+Somnio uses a lightweight convention for TODOs so that follow-up work (docs, tests, refactors, etc.) stays visible and actionable.
 
 - **Source of truth**: Anything non-trivial should be tracked as a **GitHub issue** (use the issue templates when possible).
 - **In-code TODOs**: Allowed. Prefer linking to an issue/ticket for anything that won't be handled immediately.

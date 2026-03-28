@@ -1,4 +1,4 @@
-"""Tests for native zutils HDF5 layout."""
+"""Tests for native somnio HDF5 layout."""
 
 from __future__ import annotations
 
@@ -6,12 +6,12 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from zutils.data.timeseries import TimeSeries
+from somnio.data.timeseries import TimeSeries
 
 h5py = pytest.importorskip("h5py")
 
-import zutils.io.hdf5 as zio_hdf5  # noqa: E402
-from zutils.io.hdf5 import native  # noqa: E402
+import somnio.io.hdf5 as zio_hdf5  # noqa: E402
+from somnio.io.hdf5 import native  # noqa: E402
 
 
 def _ts(n: int = 5, channels: int = 2, sample_rate: float | None = 100.0) -> TimeSeries:

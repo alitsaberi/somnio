@@ -11,8 +11,8 @@ import pytest
 pytest.importorskip("mne")
 pytest.importorskip("edfio")
 
-from zutils.data.timeseries import TimeSeries  # noqa: E402
-from zutils.io.edf import standard  # noqa: E402
+from somnio.data.timeseries import TimeSeries  # noqa: E402
+from somnio.io.edf import standard  # noqa: E402
 
 
 def _ts(n: int = 200, channels: int = 2, sample_rate: float = 100.0) -> TimeSeries:

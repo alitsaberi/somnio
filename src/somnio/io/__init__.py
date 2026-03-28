@@ -1,6 +1,6 @@
-"""zutils.io — format and layout read/write."""
+"""somnio.io — format and layout read/write."""
 
-from zutils.io.base import (
+from somnio.io.base import (
     AnnotationReader,
     AnnotationWriter,
     SignalReader,

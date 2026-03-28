@@ -1,7 +1,7 @@
 """ZMax headband TCP live-mode client (Hypnodyne / ZMax USB server)."""
 
-from zutils.devices.zmax.client import ConnectionClosedError, ZMax, ensure_connected
-from zutils.devices.zmax.constants import (
+from somnio.devices.zmax.client import ConnectionClosedError, ZMax, ensure_connected
+from somnio.devices.zmax.constants import (
     DEFAULTS,
     EXPECTED_DATA_LENGTH,
     LED_MAX_INTENSITY,
@@ -13,7 +13,7 @@ from zutils.devices.zmax.constants import (
     STIMULATION_MIN_DURATION,
     STIMULATION_MIN_REPETITIONS,
 )
-from zutils.devices.zmax.enums import DataType, DongleStatus, LEDColor
+from somnio.devices.zmax.enums import DataType, DongleStatus, LEDColor
 
 __all__ = [
     "ConnectionClosedError",

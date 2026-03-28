@@ -9,7 +9,7 @@ from time import sleep, time_ns
 
 import numpy as np
 
-from zutils.data.timeseries import Sample
+from somnio.data.timeseries import Sample
 
 from .constants import (
     DEFAULT_IP,
@@ -182,7 +182,7 @@ class ZMax:
                 :class:`~enums.DataType` members.
 
         Returns:
-            :class:`~zutils.data.timeseries.Sample` with values in SI units,
+            :class:`~somnio.data.timeseries.Sample` with values in SI units,
             timestamp from :func:`time.time_ns`, channel names from
             :attr:`DataType.name`, and units from
             :attr:`DataTypeConfig.unit`.

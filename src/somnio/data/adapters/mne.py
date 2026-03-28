@@ -1,6 +1,6 @@
-"""MNE ↔ :class:`~zutils.data.timeseries.TimeSeries` (optional ``mne`` dependency).
+"""MNE ↔ :class:`~somnio.data.timeseries.TimeSeries` (optional ``mne`` dependency).
 
-Install with ``pip install zutils[edf]`` or ``pip install mne``.
+Install with ``pip install somnio[edf]`` or ``pip install mne``.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from zutils.data.timeseries import TimeSeries
+from somnio.data.timeseries import TimeSeries
 
 if TYPE_CHECKING:
     from mne.io import BaseRaw
@@ -22,7 +22,7 @@ def import_mne():  # noqa: ANN201
         import mne
     except ImportError as exc:  # pragma: no cover - import guard
         raise ImportError(
-            "zutils.data.adapters.mne requires MNE. Install with: pip install zutils[edf]"
+            "somnio.data.adapters.mne requires MNE. Install with: pip install somnio[edf]"
         ) from exc
     return mne
 
@@ -65,7 +65,7 @@ def _ch_types_for_units(units: tuple[str, ...]) -> list[str]:
 
 
 def from_mne_raw(raw: BaseRaw) -> TimeSeries:
-    """Convert a preloaded MNE :class:`~mne.io.BaseRaw` to :class:`~zutils.data.timeseries.TimeSeries`.
+    """Convert a preloaded MNE :class:`~mne.io.BaseRaw` to :class:`~somnio.data.timeseries.TimeSeries`.
 
     Values are MNE's SI representation (e.g. Volts for EEG). Timestamps use
     ``meas_date`` when present; otherwise nanoseconds are relative with the first
