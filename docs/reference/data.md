@@ -117,3 +117,17 @@ Batch a sequence of `Sample` objects into a `TimeSeries`.
 - `samples` must be non-empty.
 - All inputs must share `channel_names` and `units`.
 - Returns `sample_rate=None` — caller may set it afterward if the source is known to be regular.
+
+---
+
+## MNE adapter (optional)
+
+Module: `zutils.data.adapters.mne` (requires **`zutils[edf]`** or **`mne`** installed).
+
+| Function | Purpose |
+|----------|---------|
+| `from_mne_raw(raw)` | Build `TimeSeries` from a loaded MNE `Raw` (SI scaling and timestamps follow MNE; channel names normalized with spaces → underscores). |
+| `to_mne_raw(data)` | Build `RawArray` from `TimeSeries` (`sample_rate` required; `meas_date` from the first timestamp). |
+| `import_mne()` | Return the `mne` module or raise with an install hint. |
+
+The [EDF I/O reference](io.md#optional-dependency-edf) uses these helpers for all EDF layouts. They are the single implementation for MNE ↔ `TimeSeries` conversion in zutils.
