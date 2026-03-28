@@ -67,5 +67,6 @@ nav:
   - Reference:
     - CLI: reference/cli.md
     - Data: reference/data.md
+    - I/O: reference/io.md
   - Contributing: contributing.md
   - Release Notes: release-notes.md

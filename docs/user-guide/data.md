@@ -1,7 +1,7 @@
 # Data Types
 
 `zutils.data` provides two pure in-memory containers for sleep and physiological signals.
-They carry no I/O or serialization logic — that belongs in [`zutils.io`](../reference/data.md).
+They carry no I/O or serialization logic — see the [I/O reference](../reference/io.md) for HDF5 layouts and `zutils.io.base` protocols.
 
 ## Core types
 
@@ -19,8 +19,9 @@ All values and metadata follow these rules throughout zutils:
 - **Physical units** — SI base units, tracked per-channel in the `units` field.
   Use `"V"` (not `"uV"`), `"m/s^2"` (not `"g"`), `"degC"` for temperature.
   The I/O layer handles format-specific scaling (e.g. EDF stores µV → `read_edf` converts to V).
-- **`sample_rate`** — `float` Hz or `None` for irregular data. Timestamps are always
-  authoritative; `sample_rate` is metadata, not a replacement.
+- **`sample_rate`** — `float` Hz when nominally regularly sampled, or `None` for irregular/unknown data.
+  Timestamps are always authoritative; `sample_rate` does not auto-correct times.
+  Formats with only a scalar rate (e.g. USleep HDF5) enforce their own grid on **write**; see [I/O reference](../reference/io.md).
 - **`channel_names`** — unique, underscore-separated strings (e.g. `"EEG_L"`, `"ACC_X"`).
 
 ## Creating a `Sample`
