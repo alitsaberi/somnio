@@ -1,7 +1,7 @@
 """USleep / zmax-datasets HDF5 export layout: ``/channels/{{name}}`` + file ``sample_rate``.
 
 File-level ``sample_rate`` (Hz) is authoritative. Optional ``start_timestamp_ns``
-(zutils extension for epoch round-trip). Per-channel 1-D datasets use attrs
+(somnio extension for epoch round-trip). Per-channel 1-D datasets use attrs
 ``channel_index`` (write order, as in zmax-datasets) and optional ``unit``.
 Per-dataset ``sample_rate`` is not written; if present on files from other tools,
 :func:`read` ignores it and uses only the file attribute.
@@ -14,7 +14,7 @@ If every channel dataset has ``channel_index``, :func:`read` stacks columns in
 that order (not lexicographic by name). Otherwise names are sorted for backward
 compatibility.
 
-:class:`~zutils.data.timeseries.TimeSeries` keeps per-sample timestamps as
+:class:`~somnio.data.timeseries.TimeSeries` keeps per-sample timestamps as
 authoritative; :func:`write` checks they match the grid above. Use
 :func:`align_timestamps_to_usleep_grid` if sub-nanosecond jitter should be
 snapped before writing.
@@ -27,13 +27,13 @@ from typing import Any
 
 import numpy as np
 
-from zutils.data.timeseries import TimeSeries
+from somnio.data.timeseries import TimeSeries
 
 try:
     import h5py
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "zutils.io.hdf5.usleep requires h5py. Install with: pip install zutils[hdf5]"
+        "somnio.io.hdf5.usleep requires h5py. Install with: pip install somnio[hdf5]"
     ) from exc
 
 CHANNELS_GROUP = "channels"
@@ -112,7 +112,7 @@ def read(path: Path | str) -> TimeSeries:
     """Read USleep-style HDF5: 1-D float datasets under ``/channels``.
 
     File attribute ``sample_rate`` (Hz) is required. The returned
-    :class:`~zutils.data.timeseries.TimeSeries` always has ``sample_rate`` set.
+    :class:`~somnio.data.timeseries.TimeSeries` always has ``sample_rate`` set.
     Optional ``start_timestamp_ns`` sets the first-sample Unix-epoch time in
     nanoseconds (default 0). Per-channel attrs: optional ``unit``; if every
     channel has ``channel_index``, column order follows those indices (zmax-datasets
@@ -167,7 +167,7 @@ def read(path: Path | str) -> TimeSeries:
 def write(path: Path | str, data: TimeSeries) -> None:
     """Write ``data`` in USleep-style layout (overwrites ``path``).
 
-    Requires :attr:`~zutils.data.timeseries.TimeSeries.sample_rate` to be set
+    Requires :attr:`~somnio.data.timeseries.TimeSeries.sample_rate` to be set
     (Hz). Timestamps must match the regular grid
     ``start_ns + i * round(1e9 / sample_rate)`` with ``start_ns`` equal to the
     first sample's time. ``start_timestamp_ns`` is stored from that first

@@ -1,4 +1,4 @@
-"""Native zutils HDF5 layout: per-group ``data`` / ``timestamp`` datasets + attrs."""
+"""Native somnio HDF5 layout: per-group ``data`` / ``timestamp`` datasets + attrs."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from typing import Any, Mapping
 
 import numpy as np
 
-from zutils.data.timeseries import TimeSeries
+from somnio.data.timeseries import TimeSeries
 
 try:
     import h5py
 except ImportError as exc:  # pragma: no cover - import guard
     raise ImportError(
-        "zutils.io.hdf5.native requires h5py. Install with: pip install zutils[hdf5]"
+        "somnio.io.hdf5.native requires h5py. Install with: pip install somnio[hdf5]"
     ) from exc
 
 
@@ -61,14 +61,14 @@ def read(path: Path | str, *, group: str | None = None) -> TimeSeries:
             native-layout top-level group (with ``data`` and ``timestamp``).
 
     Returns:
-        The reconstructed :class:`~zutils.data.timeseries.TimeSeries`.
+        The reconstructed :class:`~somnio.data.timeseries.TimeSeries`.
     """
     path = Path(path)
     with h5py.File(path, "r") as f:
         if group is not None:
             g = f[group]
             if not isinstance(g, h5py.Group) or not _is_native_group(g):
-                raise ValueError(f"Group {group!r} is not a native zutils layout")
+                raise ValueError(f"Group {group!r} is not a native somnio layout")
             return _read_group_sample(g)
 
         candidates = [
@@ -105,7 +105,7 @@ def write(
     *,
     append: bool = False,
 ) -> None:
-    """Write a :class:`~zutils.data.timeseries.TimeSeries` as one native group.
+    """Write a :class:`~somnio.data.timeseries.TimeSeries` as one native group.
 
     Args:
         path: HDF5 file path.
@@ -129,7 +129,7 @@ def write(
 
 
 def serialize(ts: TimeSeries) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
-    """Encode a :class:`~zutils.data.timeseries.TimeSeries` for native HDF5 layout.
+    """Encode a :class:`~somnio.data.timeseries.TimeSeries` for native HDF5 layout.
 
     Returns dataset arrays and group attributes suitable for incremental append
     (e.g. extend ``data``/``timestamp`` datasets in the same group).
@@ -153,7 +153,7 @@ def deserialize(
     datasets: Mapping[str, np.ndarray],
     attrs: Mapping[str, Any],
 ) -> TimeSeries:
-    """Decode outputs of :func:`serialize` into a :class:`~zutils.data.timeseries.TimeSeries`."""
+    """Decode outputs of :func:`serialize` into a :class:`~somnio.data.timeseries.TimeSeries`."""
     try:
         values = datasets["data"]
         timestamps = datasets["timestamp"]
@@ -182,7 +182,7 @@ def deserialize(
 
 
 class NativeHDF5Reader:
-    """Stateless reader for the native zutils HDF5 layout."""
+    """Stateless reader for the native somnio HDF5 layout."""
 
     def read(self, path: Path, **kwargs: Any) -> TimeSeries:
         """Read from ``path``; pass ``group`` to select a specific group name."""
@@ -191,7 +191,7 @@ class NativeHDF5Reader:
 
 
 class NativeHDF5Writer:
-    """Stateless writer for the native zutils HDF5 layout."""
+    """Stateless writer for the native somnio HDF5 layout."""
 
     def write(self, path: Path, data: TimeSeries, **kwargs: Any) -> None:
         """Write ``data``; pass ``group_name`` (required) and optional ``append``."""

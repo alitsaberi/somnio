@@ -2,38 +2,38 @@
 
 ## Installation
 
-ZUtils requires **Python 3.10+**.
+Somnio requires **Python 3.10+**.
 
 ### With uv
 
 ```bash
-uv add zutils
+uv add somnio
 ```
 
 To use the [CLI](user-guide/cli.md), install with the optional `cli` extra:
 
 ```bash
-uv add zutils[cli]
+uv add somnio[cli]
 ```
 
 ### With pip
 
 ```bash
-pip install zutils
+pip install somnio
 ```
 
 For CLI support:
 
 ```bash
-pip install zutils[cli]
+pip install somnio[cli]
 ```
 
-For HDF5 signal layouts (`zutils.io.hdf5`, native and USleep formats):
+For HDF5 signal layouts (`somnio.io.hdf5`, native and USleep formats):
 
 ```bash
-uv add zutils[hdf5]
+uv add somnio[hdf5]
 # or
-pip install zutils[hdf5]
+pip install somnio[hdf5]
 ```
 
 ### Verify installation
@@ -41,7 +41,7 @@ pip install zutils[hdf5]
 If you installed the CLI extra, confirm it works:
 
 ```bash
-zutils --help
+somnio --help
 ```
 
 You should see the list of commands (e.g. `download-nsrr`).

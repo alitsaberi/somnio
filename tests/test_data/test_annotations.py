@@ -1,9 +1,9 @@
-"""Tests for zutils.data.annotations — Event, Epochs, conversions."""
+"""Tests for somnio.data.annotations — Event, Epochs, conversions."""
 
 import numpy as np
 import pytest
 
-from zutils.data import Event, Epochs, epochs_to_events, events_to_epochs
+from somnio.data import Event, Epochs, epochs_to_events, events_to_epochs
 
 
 class TestEvent:
