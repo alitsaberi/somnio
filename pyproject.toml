@@ -30,6 +30,10 @@ cli = [
     "tqdm>=4.67.3",
     "typer>=0.21.1",
 ]
+edf = [
+    "edfio>=0.4",
+    "mne>=1.5",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]
@@ -54,6 +58,8 @@ lint = [
 test = [
     "pytest>=9.0.2",
     "h5py>=3.8",
+    "mne>=1.5",
+    "edfio>=0.4",
 ]
 
 [tool.uv.dependency-groups]
