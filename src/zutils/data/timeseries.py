@@ -8,7 +8,9 @@ Conventions (authoritative for all of zutils):
 - Physical units: SI base units tracked per-channel via ``units`` field.
   Use SI symbols: ``"V"`` (not ``"uV"``), ``"m/s^2"`` (not ``"g"``),
   ``"degC"`` for temperature.
-- sample_rate: float in Hz, or None for irregular/unknown data.
+- sample_rate: float in Hz when nominally regularly sampled, or None for
+  irregular/unknown data. Timestamps remain authoritative; a specific file
+  format may still require an exact spacing (see that format's writer).
 - channel_names: unique, non-empty, underscore-separated (e.g. ``"EEG_L"``).
 """
 
@@ -65,8 +67,9 @@ class TimeSeries:
     """Timestamp-first multi-channel timeseries.
 
     Core streaming/storage type. Supports irregular sampling natively;
-    regular sampling is expressed via optional ``sample_rate`` metadata.
-    Timestamps are always per-sample and authoritative.
+    regular sampling is expressed via optional ``sample_rate`` metadata
+    (nominal Hz when ``sample_rate`` is set). Timestamps are always per-sample
+    and authoritative — they are not auto-corrected to match ``sample_rate``.
 
     Attributes:
         values: Measurement array, shape ``(n_samples, n_channels)``, dtype float64.
@@ -75,7 +78,8 @@ class TimeSeries:
             Nanoseconds since Unix epoch. Monotonically non-decreasing.
         channel_names: Unique channel identifiers, length == n_channels.
         units: Physical unit per channel (SI symbols), length == n_channels.
-        sample_rate: Nominal sample rate in Hz, or None for irregular data.
+        sample_rate: Nominal sample rate in Hz when data are intended to be
+            regularly spaced, or None for irregular/unknown sampling.
     """
 
     values: np.ndarray
