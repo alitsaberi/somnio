@@ -17,11 +17,16 @@ With **uv**: `uv add somnio`, `uv add somnio[cli]`, or `uv add somnio[hdf5]`.
 
 ## Documentation
 
-Site source lives under [`docs/`](docs/). Build or serve locally (with the `docs` dependency group installed):
+[Documentation](https://alitsaberi.github.io/somnio/)
 
-```bash
-uv sync --group docs
-uv run mkdocs serve
-```
+## Contributing
 
-Reference material includes [data types](docs/reference/data.md) and [I/O / HDF5](docs/reference/io.md).
+See [Contributing](https://github.com/alitsaberi/somnio/blob/master/docs/contributing.md).
+
+## Changelog
+
+See [CHANGELOG.md](https://github.com/alitsaberi/somnio/blob/master/CHANGELOG.md).
+
+## License
+
+[MIT](https://github.com/alitsaberi/somnio/blob/master/LICENSE)
