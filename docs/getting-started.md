@@ -13,7 +13,7 @@ uv add somnio
 To use the [CLI](user-guide/cli.md), install with the optional `cli` extra:
 
 ```bash
-uv add somnio[cli]
+uv add somnio --extra cli
 ```
 
 ### With pip
@@ -31,7 +31,7 @@ pip install somnio[cli]
 For HDF5 signal layouts (`somnio.io.hdf5`, native and USleep formats):
 
 ```bash
-uv add somnio[hdf5]
+uv add somnio --extra hdf5
 # or
 pip install somnio[hdf5]
 ```
