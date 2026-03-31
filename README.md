@@ -13,7 +13,7 @@ Optional extras:
 - `somnio[cli]` — command-line tools
 - `somnio[hdf5]` — `somnio.io.hdf5` layouts (requires [h5py](https://www.h5py.org/))
 
-With **uv**: `uv add somnio`, `uv add somnio[cli]`, or `uv add somnio[hdf5]`.
+With **uv**: `uv add somnio`, `uv add somnio --extra cli`, or `uv add somnio --extra hdf5`.
 
 ## Documentation
 

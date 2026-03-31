@@ -9,7 +9,7 @@ Signal formats are organized under `somnio.io` using small **layout modules**. O
 Install **h5py** via the project extra:
 
 ```bash
-uv add somnio[hdf5]
+uv add somnio --extra hdf5
 # or
 pip install somnio[hdf5]
 ```
@@ -112,7 +112,7 @@ Per-channel **`sample_rate`** on legacy or third-party files is **ignored**; onl
 Install **MNE** and **edfio** via the project extra:
 
 ```bash
-uv add somnio[edf]
+uv add somnio --extra edf
 # or
 pip install somnio[edf]
 ```
