@@ -25,7 +25,7 @@ cd somnio
 2\. Install dependencies
 
 ```bash
-uv sync --all-groups --all-extras
+uv sync --all-extras --dev
 ```
 
 3\. Set up pre-commit hooks
@@ -39,7 +39,17 @@ This project follows [GitHub Flow](https://docs.github.com/en/get-started/using-
 
 ### Tips and Conventions
 
-- Commit messages should start with a **capitalized action verb** (imperative) and be descriptive, e.g. `Add logging for debug output`, `Fix crash on empty config`, `Update contributing guide`.
+- Commit messages should follow the format **`Tag(context): Message`**.
+    - **Tags**:
+        - **`feat`**: New user-facing functionality
+        - **`fix`**: Bug fix
+        - **`docs`**: Documentation-only changes
+        - **`refactor`**: Code change that neither fixes a bug nor adds a feature
+        - **`test`**: Tests only
+        - **`chore`**: Tooling/maintenance (deps, CI, formatting, etc.)
+    - **Context**: A short scope for *where* the change applies (a package/module, feature area, or subsystem), e.g. `cli`, `zmax`, `docs`, `io`, `logging`.
+    - **Examples**: `fix(zmax): Handle empty config`, `docs(contributing): Document commit format`, `feat(cli): Add --json output`
+- Branch names should also use the same **tags**, with no context: **`tag/short-kebab-description`**, e.g. `fix/handle-empty-config`, `docs/contributing-commit-format`, `feat/cli-json-output`.
 - Keep PRs focused; avoid bundling unrelated changes. Squash before merging.
 - Rebase your branch on the latest `master` when needed to minimize merge conflicts.
 - Make PR titles/descriptions clear and include a brief test plan when relevant.

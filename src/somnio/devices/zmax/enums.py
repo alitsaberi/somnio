@@ -1,4 +1,4 @@
-"""ZMax data-type enumerations and SI-scale functions."""
+"""ZMax data-type enumerations."""
 
 from __future__ import annotations
 
@@ -6,33 +6,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
-from . import protocol as _protocol
-
-
-def scale_eeg(value: int) -> float:
-    """Convert raw 16-bit EEG word to Volts (SI)."""
-    uv_range = 3952.0
-    microvolts = (value - 32768) * uv_range / 65536.0
-    return microvolts * 1e-6
-
-
-_G_STANDARD = 9.80665
-
-
-def scale_accelerometer(value: int) -> float:
-    """Convert raw 16-bit accelerometer word to m/s² (SI)."""
-    g = value * 4 / 4096 - 2
-    return g * _G_STANDARD
-
-
-def scale_battery(value: int) -> float:
-    """Convert raw 16-bit battery ADC word to Volts (SI)."""
-    return value / 1024 * 6.6
-
-
-def scale_body_temperature(value: int) -> float:
-    """Convert raw 16-bit thermistor ADC word to °C."""
-    return 15 + (value / 1024 * 3.3 - 1.0446) / 0.0565537333333333
+from .protocol import (
+    get_word_at,
+    scale_accelerometer,
+    scale_battery,
+    scale_body_temperature,
+    scale_eeg,
+)
 
 
 @dataclass(frozen=True)
@@ -64,7 +44,7 @@ class DataTypeConfig:
             Raw 16-bit integer if no scale function, otherwise the scaled
             float value in SI units.
         """
-        value = _protocol.get_word_at(buffer, self.buffer_position)
+        value = get_word_at(buffer, self.buffer_position)
         if self.scale_function:
             return self.scale_function(value)
         return value
