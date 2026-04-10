@@ -14,8 +14,14 @@ from somnio.devices.zmax import (
     DataType,
     ZMax,
 )
-from somnio.devices.zmax.enums import DongleStatus, LEDColor, scale_eeg
-from somnio.devices.zmax.protocol import dec2hex, get_byte_at, get_word_at
+from somnio.devices.zmax.enums import DongleStatus, LEDColor
+from somnio.devices.zmax.protocol import (
+    dec2hex,
+    get_byte_at,
+    get_word_at,
+    scale_eeg,
+    seconds_to_stimulation_units,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +234,20 @@ def test_zmax_read_skips_invalid_data(mock_socket):
     assert isinstance(sample, Sample)
 
 
+def test_seconds_to_stimulation_units_quantization_warning_is_robust(caplog):
+    # 0.3 is exactly representable in decimal but not in binary floats; this
+    # should not trigger a quantization warning.
+    with caplog.at_level(logging.WARNING):
+        seconds_to_stimulation_units(0.3, name="Duration")
+    assert "quantized" not in caplog.text
+
+    # Values not aligned to the device resolution should warn.
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        seconds_to_stimulation_units(0.31, name="Duration")
+    assert "quantized" in caplog.text
+
+
 def test_zmax_read_skips_short_data(mock_socket):
     """Data shorter than MIN_DATA_LENGTH is discarded; next valid packet is used."""
     short_buf = "01 " * 10  # only 10 bytes — too short
@@ -289,34 +309,34 @@ def test_dongle_message_skipped_during_read(mock_socket):
 def test_stimulate_validates_repetitions(mock_socket):
     zmax = ZMax("127.0.0.1", 8080)
     with pytest.raises(ValueError, match="Repetitions"):
-        zmax.stimulate(LEDColor.RED, 10, 10, 0, False)
+        zmax.stimulate(LEDColor.RED, 1.0, 1.0, 0, False)
 
     with pytest.raises(ValueError, match="Repetitions"):
-        zmax.stimulate(LEDColor.RED, 10, 10, 200, False)
+        zmax.stimulate(LEDColor.RED, 1.0, 1.0, 200, False)
 
 
 def test_stimulate_validates_on_duration(mock_socket):
     zmax = ZMax("127.0.0.1", 8080)
     with pytest.raises(ValueError, match="On duration"):
-        zmax.stimulate(LEDColor.RED, 0, 10, 1, False)
+        zmax.stimulate(LEDColor.RED, 0.0, 1.0, 1, False)
 
     with pytest.raises(ValueError, match="On duration"):
-        zmax.stimulate(LEDColor.RED, 300, 10, 1, False)
+        zmax.stimulate(LEDColor.RED, 30.0, 1.0, 1, False)
 
 
 def test_stimulate_validates_off_duration(mock_socket):
     zmax = ZMax("127.0.0.1", 8080)
     with pytest.raises(ValueError, match="Off duration"):
-        zmax.stimulate(LEDColor.RED, 10, 0, 1, False)
+        zmax.stimulate(LEDColor.RED, 1.0, 0.0, 1, False)
 
 
 def test_stimulate_validates_led_intensity(mock_socket):
     zmax = ZMax("127.0.0.1", 8080)
     with pytest.raises(ValueError, match="LED intensity"):
-        zmax.stimulate(LEDColor.RED, 10, 10, 1, False, led_intensity=0)
+        zmax.stimulate(LEDColor.RED, 1.0, 1.0, 1, False, led_intensity=0)
 
     with pytest.raises(ValueError, match="LED intensity"):
-        zmax.stimulate(LEDColor.RED, 10, 10, 1, False, led_intensity=101)
+        zmax.stimulate(LEDColor.RED, 1.0, 1.0, 1, False, led_intensity=101)
 
 
 def test_stimulate_sends_correct_command(mock_socket):
@@ -325,8 +345,8 @@ def test_stimulate_sends_correct_command(mock_socket):
 
     zmax.stimulate(
         led_color=LEDColor.RED,
-        on_duration=10,
-        off_duration=10,
+        on_duration_s=1.0,
+        off_duration_s=1.0,
         repetitions=1,
         vibration=False,
         led_intensity=100,
@@ -347,8 +367,8 @@ def test_stimulate_sequential_validates_off_duration_before_sleep(mock_socket):
         with pytest.raises(ValueError, match="Off duration"):
             zmax.stimulate_sequential(
                 LEDColor.RED,
-                on_duration=10,
-                off_duration=0,
+                on_duration_s=1.0,
+                off_duration_s=-1.0,
                 repetitions=1,
                 vibration=False,
             )
@@ -418,23 +438,15 @@ def test_expected_data_length_matches_min():
     assert EXPECTED_DATA_LENGTH == MIN_DATA_LENGTH
 
 
-def test_ensure_connected_raises_when_disconnected(mock_socket):
-    """ensure_connected raises ValueError when the device is not connected."""
-    from somnio.devices.zmax import ensure_connected
-
+def test_is_connected_false_when_disconnected(mock_socket):
     mock_socket.return_value.getpeername.side_effect = OSError()
     zmax = ZMax("127.0.0.1", 8080)
 
-    with pytest.raises(ValueError, match="is not connected"):
-        ensure_connected(zmax)
+    assert zmax.is_connected() is False
 
 
-def test_ensure_connected_returns_zmax_when_connected(mock_socket):
-    """ensure_connected returns the ZMax instance when connected."""
-    from somnio.devices.zmax import ensure_connected
-
+def test_is_connected_true_when_connected(mock_socket):
     mock_socket.return_value.getpeername.return_value = ("127.0.0.1", 8080)
     zmax = ZMax("127.0.0.1", 8080)
 
-    result = ensure_connected(zmax)
-    assert result is zmax
+    assert zmax.is_connected() is True

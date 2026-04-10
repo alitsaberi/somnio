@@ -14,25 +14,27 @@ from somnio.data.timeseries import Sample
 from .constants import (
     DEFAULT_IP,
     DEFAULT_PORT,
-    DEFAULT_SOCKET_TIMEOUT,
     DONGLE_MESSAGE_PREFIX,
     LED_MAX_INTENSITY,
-    LED_MIN_INTENSITY,
     LIVEMODE_SENDBYTES_COMMAND,
     MIN_DATA_LENGTH,
     PACKET_TYPE_POSITION,
     SENDBYTES_MAX_RETRIES,
     STIMULATION_FLASH_LED_COMMAND,
-    STIMULATION_MAX_DURATION,
-    STIMULATION_MAX_REPETITIONS,
-    STIMULATION_MIN_DURATION,
     STIMULATION_MIN_REPETITIONS,
-    STIMULATION_PWM_MAX,
     STIMULATION_RETRY_DELAY,
+    STIMULATION_TIME_UNIT_S,
     VALID_PACKET_TYPES,
 )
 from .enums import DataType, DongleStatus, LEDColor
-from .protocol import dec2hex, get_byte_at
+from .protocol import (
+    dec2hex,
+    get_byte_at,
+    seconds_to_stimulation_units,
+    stimulation_led_intensity_to_pwm,
+    validate_stimulation_repetitions,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class ZMax:
         self,
         ip: str = DEFAULT_IP,
         port: int = DEFAULT_PORT,
-        socket_timeout: float | None = DEFAULT_SOCKET_TIMEOUT,
+        socket_timeout: float | None = None,
     ) -> None:
         self._ip = ip
         self._port = port
@@ -311,42 +313,10 @@ class ZMax:
     # Stimulation
     # ------------------------------------------------------------------
 
-    def _validate_stimulation_args(
-        self,
-        *,
-        repetitions: int,
-        on_duration: int,
-        off_duration: int,
-        led_intensity: int,
-    ) -> None:
-        """Raise ``ValueError`` if stimulation parameters are out of device range."""
-        if not (
-            STIMULATION_MIN_REPETITIONS <= repetitions <= STIMULATION_MAX_REPETITIONS
-        ):
-            raise ValueError(
-                f"Repetitions must be between {STIMULATION_MIN_REPETITIONS}"
-                f" and {STIMULATION_MAX_REPETITIONS}"
-            )
-        if not (STIMULATION_MIN_DURATION <= on_duration <= STIMULATION_MAX_DURATION):
-            raise ValueError(
-                f"On duration must be between {STIMULATION_MIN_DURATION}"
-                f" and {STIMULATION_MAX_DURATION}"
-            )
-        if not (STIMULATION_MIN_DURATION <= off_duration <= STIMULATION_MAX_DURATION):
-            raise ValueError(
-                f"Off duration must be between {STIMULATION_MIN_DURATION}"
-                f" and {STIMULATION_MAX_DURATION}"
-            )
-        if not (LED_MIN_INTENSITY <= led_intensity <= LED_MAX_INTENSITY):
-            raise ValueError(
-                f"LED intensity must be between {LED_MIN_INTENSITY}"
-                f" and {LED_MAX_INTENSITY}"
-            )
-
     def vibrate(
         self,
-        on_duration: int,
-        off_duration: int,
+        on_duration_s: float,
+        off_duration_s: float,
         repetitions: int,
     ) -> None:
         """Trigger the vibration motor without LED flash.
@@ -355,14 +325,15 @@ class ZMax:
         ``led_color=LEDColor.OFF`` and ``vibration=True``.
 
         Args:
-            on_duration: Duration of each vibration pulse (1–255 units).
-            off_duration: Duration of the pause between pulses (1–255 units).
+            on_duration_s: Duration of each vibration pulse in seconds (quantized to
+                0.1s; roughly 0.1–25.5 s).
+            off_duration_s: Pause before each pulse in seconds (>=0.1 s).
             repetitions: Number of pulses (1–127).
         """
         self.stimulate_sequential(
             led_color=LEDColor.OFF,
-            on_duration=on_duration,
-            off_duration=off_duration,
+            on_duration_s=on_duration_s,
+            off_duration_s=off_duration_s,
             repetitions=repetitions,
             vibration=True,
         )
@@ -370,8 +341,8 @@ class ZMax:
     def stimulate(
         self,
         led_color: LEDColor,
-        on_duration: int,
-        off_duration: int,
+        on_duration_s: float,
+        off_duration_s: float,
         repetitions: int,
         vibration: bool,
         led_intensity: int = LED_MAX_INTENSITY,
@@ -382,10 +353,12 @@ class ZMax:
         Builds and transmits a single LED-flash / vibration command packet.
         For multi-pulse sequences, use :meth:`stimulate_sequential` instead.
 
+        Durations are expressed in seconds quantized to 0.1s (100 ms).
+
         Args:
             led_color: RGB colour for the LED flash.
-            on_duration: Flash on-time (1–255 units, ≈10 ms each).
-            off_duration: Interval between flashes (1–255 units).
+            on_duration_s: LED on-time in seconds (0.1–25.5 s).
+            off_duration_s: Off-time between flashes in seconds (0.1–25.5 s).
             repetitions: Number of repeats encoded in the packet (1–127).
             vibration: ``True`` to also activate the vibration motor.
             led_intensity: LED brightness as a percentage (1–100).
@@ -394,14 +367,11 @@ class ZMax:
         Raises:
             ValueError: If any parameter is outside its valid range.
         """
-        self._validate_stimulation_args(
-            repetitions=repetitions,
-            on_duration=on_duration,
-            off_duration=off_duration,
-            led_intensity=led_intensity,
-        )
+        validate_stimulation_repetitions(repetitions)
+        on_units = seconds_to_stimulation_units(on_duration_s, name="On duration")
+        off_units = seconds_to_stimulation_units(off_duration_s, name="Off duration")
 
-        pwm = int(led_intensity / 100 * STIMULATION_PWM_MAX)
+        pwm = stimulation_led_intensity_to_pwm(led_intensity)
 
         hex_values = [
             dec2hex(x)
@@ -411,8 +381,8 @@ class ZMax:
                 *led_color.value,  # repeated for left + right eye
                 pwm,
                 0,
-                on_duration,
-                off_duration,
+                on_units,
+                off_units,
                 repetitions,
                 int(vibration),
                 int(alternate_eyes),
@@ -432,8 +402,8 @@ class ZMax:
     def stimulate_sequential(
         self,
         led_color: LEDColor,
-        on_duration: int,
-        off_duration: int,
+        on_duration_s: float,
+        off_duration_s: float,
         repetitions: int,
         vibration: bool,
         led_intensity: int = LED_MAX_INTENSITY,
@@ -446,13 +416,11 @@ class ZMax:
         pulses.  This gives finer timing control and avoids firmware limits
         on repetition count.
 
-        The inter-pulse pause is ``(off_duration - 1) / 10`` seconds.
-
         Args:
             led_color: RGB colour for the LED flash.
-            on_duration: Flash on-time (1–255 units).
-            off_duration: Approximate interval between successive pulses
-                (1–255 units; the actual pause is ``(off_duration - 1) / 10 s``).
+            on_duration_s: Duration of each vibration pulse in seconds (quantized to
+                0.1s; roughly 0.1–25.5 s).
+            off_duration_s: Pause before each pulse in seconds (>=0.1 s).
             repetitions: Number of pulses to deliver.
             vibration: ``True`` to also activate the vibration motor.
             led_intensity: LED brightness as a percentage (1–100).
@@ -463,20 +431,24 @@ class ZMax:
                 :meth:`stimulate`). Ensures the inter-pulse delay is never
                 negative before :func:`time.sleep` is called.
         """
-        self._validate_stimulation_args(
-            repetitions=repetitions,
-            on_duration=on_duration,
-            off_duration=off_duration,
-            led_intensity=led_intensity,
-        )
+
+        sleep_duration_s = off_duration_s - STIMULATION_TIME_UNIT_S
+
+        if sleep_duration_s < 0:
+            raise ValueError("Off duration must be greater than 100 ms")
+
+        if repetitions < STIMULATION_MIN_REPETITIONS:
+            raise ValueError(
+                f"Repetitions must be at least {STIMULATION_MIN_REPETITIONS}"
+            )
 
         for i in range(repetitions):
             logger.info("Stimulating %s/%s", i + 1, repetitions)
-            sleep((off_duration - 1) / 10)
+            sleep(sleep_duration_s)
             self.stimulate(
                 led_color=led_color,
-                on_duration=on_duration,
-                off_duration=1,
+                on_duration_s=on_duration_s,
+                off_duration_s=STIMULATION_TIME_UNIT_S,
                 repetitions=1,
                 vibration=vibration,
                 led_intensity=led_intensity,
@@ -499,22 +471,3 @@ class ZMax:
         """Increment and return the live-sequence counter modulo 256."""
         self._live_sequence_number += 1
         return self._live_sequence_number % 256
-
-
-def ensure_connected(zmax: ZMax) -> ZMax:
-    """Assert that *zmax* is connected and return it.
-
-    Convenience guard for functions that require an active connection.
-
-    Args:
-        zmax: :class:`ZMax` instance to check.
-
-    Returns:
-        The same *zmax* instance.
-
-    Raises:
-        ValueError: If *zmax* is not currently connected.
-    """
-    if not zmax.is_connected():
-        raise ValueError(f"{zmax} is not connected")
-    return zmax
