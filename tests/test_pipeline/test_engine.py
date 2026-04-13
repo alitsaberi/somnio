@@ -68,6 +68,13 @@ def sleep_then_copy(
     return copy_to(bundle, src=src, dst=dst)
 
 
+def assert_only_keys_then_copy(
+    bundle: dict[str, TimeSeries], *, expected: tuple[str, ...], src: str, dst: str
+) -> dict[str, TimeSeries]:
+    assert set(bundle.keys()) == set(expected)
+    return copy_to(bundle, src=src, dst=dst)
+
+
 def test_fan_out_then_downstream_dependency_serial() -> None:
     p = Pipeline.from_steps(
         [
@@ -175,3 +182,55 @@ def test_dead_end_diagnostics() -> None:
     )
     with pytest.raises(DeadEndError, match="missing"):
         _ = execute(p, {"x": _make_ts(1.0)}, parallel=False)
+
+
+def test_bundle_contract_only_required_inputs_passed() -> None:
+    p = Pipeline.from_steps(
+        [
+            Step(
+                name="copy_only_x",
+                inputs=("x",),
+                outputs=("y",),
+                transform=TransformSpec(
+                    __name__ + ":assert_only_keys_then_copy",
+                    {"expected": ("x",), "src": "x", "dst": "y"},
+                ),
+            ),
+        ]
+    )
+    out = execute(p, {"x": _make_ts(1.0), "extra": _make_ts(9.0)}, parallel=False)
+    assert "y" in out
+
+
+def test_bundle_contract_allows_heterogeneous_sample_rates() -> None:
+    # Two independent signals with different timestamp grids / nominal rates.
+    x = _make_ts(1.0, t0=0, n=4)
+    y = _make_ts(2.0, t0=10, n=7)
+    x.sample_rate = 100.0
+    y.sample_rate = 25.0
+
+    p = Pipeline.from_steps(
+        [
+            Step(
+                name="copy_x",
+                inputs=("x",),
+                outputs=("x2",),
+                transform=TransformSpec(
+                    __name__ + ":copy_to", {"src": "x", "dst": "x2"}
+                ),
+            ),
+            Step(
+                name="copy_y",
+                inputs=("y",),
+                outputs=("y2",),
+                transform=TransformSpec(
+                    __name__ + ":copy_to", {"src": "y", "dst": "y2"}
+                ),
+            ),
+        ]
+    )
+    out = execute(p, {"x": x, "y": y}, parallel=True, backend="threads", max_workers=2)
+    assert out["x2"].timestamps.shape == (4,)
+    assert out["y2"].timestamps.shape == (7,)
+    assert out["x2"].sample_rate == 100.0
+    assert out["y2"].sample_rate == 25.0
