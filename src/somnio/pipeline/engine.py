@@ -1,4 +1,32 @@
-"""Execution engine for `somnio.pipeline`."""
+"""Execution engine for `somnio.pipeline`.
+
+## Multiprocessing strategy
+
+When `parallel=True`, `execute()` can schedule independent steps concurrently.
+Two backends are supported:
+
+- **processes** (default): `concurrent.futures.ProcessPoolExecutor`
+- **threads**: `concurrent.futures.ThreadPoolExecutor`
+
+### Why processes by default
+
+Most transforms are expected to be CPU-bound and NumPy-heavy. Processes provide
+true parallelism (not limited by the GIL). The trade-off is **serialization
+overhead**: inputs/outputs must be pickled to cross process boundaries, which
+can be expensive for large arrays.
+
+### Import-string transforms for robustness
+
+To keep multiprocessing stable across platforms/start methods, the processes
+backend requires `Step.transform` to be a `TransformSpec` (import string + kwargs)
+so workers only receive primitives + data bundles. The threads backend can run
+direct callables (including closures), because it does not need pickling.
+
+### When to choose threads
+
+Use `backend="threads"` when transforms are I/O-bound, you want simpler
+debugging, or a transform cannot be expressed as an import string.
+"""
 
 from __future__ import annotations
 
