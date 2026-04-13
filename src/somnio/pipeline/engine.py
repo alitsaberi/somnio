@@ -213,7 +213,6 @@ def _execute_serial(data_store: Bundle, remaining: list[tuple[int, Step]]) -> Bu
         runnable = _iter_runnable(remaining, available)
         if not runnable:
             raise DeadEndError(_format_dead_end(remaining, available))
-        _detect_runnable_output_conflicts(runnable)
 
         r = min(runnable, key=lambda x: x.idx)
         required = {k: data_store[k] for k in r.step.inputs}
