@@ -237,6 +237,18 @@ def test_bundle_contract_allows_heterogeneous_sample_rates() -> None:
 
 
 def test_parallel_processes_smoke_with_import_string_transform() -> None:
+    # Some restricted environments (e.g. sandboxed runners) may disallow the
+    # OS primitives that `ProcessPoolExecutor` relies on (named semaphores,
+    # sysconf, etc.). In those cases, we skip this smoke test; the threads
+    # backend is still fully supported.
+    try:
+        from concurrent.futures import ProcessPoolExecutor
+
+        with ProcessPoolExecutor(max_workers=1) as _:
+            pass
+    except (NotImplementedError, PermissionError, OSError):
+        pytest.skip("ProcessPoolExecutor not supported in this environment")
+
     p = Pipeline.from_steps(
         [
             Step(
