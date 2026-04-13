@@ -55,22 +55,62 @@ def _resolve_import_string(target: str) -> Callable[..., Any]:
     return fn
 
 
-def _run_step_in_worker(
-    spec: TransformSpec,
-    required_bundle: dict[str, TimeSeries],
-) -> dict[str, TimeSeries]:
-    fn = _resolve_import_string(spec.target)
-    return fn(required_bundle, **spec.kwargs)
-
-
-def _run_step_inline(
+def _execute_transform(
     transform: TransformSpec | Callable[[Bundle], Bundle],
     required_bundle: dict[str, TimeSeries],
 ) -> dict[str, TimeSeries]:
+    """Execute a transform on the required bundle.
+
+    This is intentionally top-level and import-string-friendly so it can be used
+    in thread/process worker contexts.
+    """
     if isinstance(transform, TransformSpec):
         fn = _resolve_import_string(transform.target)
         return fn(required_bundle, **transform.kwargs)
     return transform(required_bundle)
+
+
+def _execute_step(
+    *,
+    idx: int,
+    step: Step,
+    required_bundle: dict[str, TimeSeries],
+) -> dict[str, TimeSeries]:
+    out_bundle = _execute_transform(step.transform, required_bundle)
+    return _validate_out_bundle(step, idx, out_bundle)
+
+
+def _execute_step_from_spec(
+    *,
+    idx: int,
+    step_name: str,
+    outputs: tuple[str, ...],
+    spec: TransformSpec,
+    required_bundle: dict[str, TimeSeries],
+) -> dict[str, TimeSeries]:
+    """Process-safe worker entrypoint (ships only import-string spec + metadata)."""
+    out_bundle = _execute_transform(spec, required_bundle)
+    # Validate without requiring a picklable Step instance.
+    if not isinstance(out_bundle, dict):
+        raise PipelineExecutionError(
+            f"Step [{idx}] {step_name} returned {type(out_bundle)!r}, expected dict[str, TimeSeries]"
+        )
+    expected = set(outputs)
+    got = set(out_bundle.keys())
+    if got != expected:
+        raise PipelineExecutionError(
+            f"Step [{idx}] {step_name} returned keys {sorted(got)!r}, expected {sorted(expected)!r}"
+        )
+    for k, v in out_bundle.items():
+        if not isinstance(k, str):
+            raise PipelineExecutionError(
+                f"Step [{idx}] {step_name} returned non-str key {k!r}"
+            )
+        if not isinstance(v, TimeSeries):
+            raise PipelineExecutionError(
+                f"Step [{idx}] {step_name} output {k!r} is {type(v)!r}, expected TimeSeries"
+            )
+    return out_bundle
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,13 +190,11 @@ def _execute_serial(data_store: Bundle, remaining: list[tuple[int, Step]]) -> Bu
         r = min(runnable, key=lambda x: x.idx)
         required = {k: data_store[k] for k in r.step.inputs}
         try:
-            out_bundle = _run_step_inline(r.step.transform, required)
+            out_bundle = _execute_step(idx=r.idx, step=r.step, required_bundle=required)
         except Exception as e:  # noqa: BLE001
             raise PipelineExecutionError(
                 f"Step [{r.idx}] {r.step.name} failed: {e}"
             ) from e
-
-        out_bundle = _validate_out_bundle(r.step, r.idx, out_bundle)
         data_store.update(out_bundle)
         remaining = [(i, s) for (i, s) in remaining if i != r.idx]
     return data_store
@@ -194,9 +232,19 @@ def _submit_step(
         raise PipelineExecutionError(
             f"Step [{r.idx}] {r.step.name} must use TransformSpec for processes backend"
         )
-    if isinstance(r.step.transform, TransformSpec):
-        return ex.submit(_run_step_in_worker, r.step.transform, required)
-    return ex.submit(r.step.transform, required)
+    if require_spec:
+        # Avoid shipping arbitrary callables / Step objects across process boundaries.
+        assert isinstance(r.step.transform, TransformSpec)
+        return ex.submit(
+            _execute_step_from_spec,
+            idx=r.idx,
+            step_name=r.step.name,
+            outputs=tuple(r.step.outputs),
+            spec=r.step.transform,
+            required_bundle=required,
+        )
+    # Threads backend can safely run the full in-memory step.
+    return ex.submit(_execute_step, idx=r.idx, step=r.step, required_bundle=required)
 
 
 def _collect_completed(
@@ -211,9 +259,7 @@ def _collect_completed(
             out_bundle = fut.result()
         except Exception as e:  # noqa: BLE001
             raise PipelineExecutionError(f"Step [{idx}] {step_name} failed: {e}") from e
-        completed.append(
-            (idx, _validate_out_bundle(pipeline.steps[idx], idx, out_bundle))
-        )
+        completed.append((idx, out_bundle))
     return completed
 
 
