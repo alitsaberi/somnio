@@ -234,3 +234,23 @@ def test_bundle_contract_allows_heterogeneous_sample_rates() -> None:
     assert out["y2"].timestamps.shape == (7,)
     assert out["x2"].sample_rate == 100.0
     assert out["y2"].sample_rate == 25.0
+
+
+def test_parallel_processes_smoke_with_import_string_transform() -> None:
+    p = Pipeline.from_steps(
+        [
+            Step(
+                name="copy_x",
+                inputs=("x",),
+                outputs=("y",),
+                transform=TransformSpec(
+                    __name__ + ":copy_to", {"src": "x", "dst": "y"}
+                ),
+            )
+        ]
+    )
+    out = execute(
+        p, {"x": _make_ts(3.0)}, parallel=True, backend="processes", max_workers=1
+    )
+    assert "y" in out
+    np.testing.assert_allclose(out["y"].values, 3.0)
