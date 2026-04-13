@@ -17,6 +17,31 @@ from somnio.pipeline.errors import (
 )
 
 
+def _validate_out_bundle(
+    step: Step, idx: int, out_bundle: Any
+) -> dict[str, TimeSeries]:
+    if not isinstance(out_bundle, dict):
+        raise PipelineExecutionError(
+            f"Step [{idx}] {step.name} returned {type(out_bundle)!r}, expected dict[str, TimeSeries]"
+        )
+    expected = set(step.outputs)
+    got = set(out_bundle.keys())
+    if got != expected:
+        raise PipelineExecutionError(
+            f"Step [{idx}] {step.name} returned keys {sorted(got)!r}, expected {sorted(expected)!r}"
+        )
+    for k, v in out_bundle.items():
+        if not isinstance(k, str):
+            raise PipelineExecutionError(
+                f"Step [{idx}] {step.name} returned non-str key {k!r}"
+            )
+        if not isinstance(v, TimeSeries):
+            raise PipelineExecutionError(
+                f"Step [{idx}] {step.name} output {k!r} is {type(v)!r}, expected TimeSeries"
+            )
+    return out_bundle
+
+
 def _resolve_import_string(target: str) -> Callable[..., Any]:
     if ":" not in target:
         raise ValueError(
@@ -114,6 +139,115 @@ def _select_non_conflicting(runnable: list[_Runnable]) -> list[_Runnable]:
     return selected
 
 
+def _execute_serial(data_store: Bundle, remaining: list[tuple[int, Step]]) -> Bundle:
+    while remaining:
+        available = set(data_store.keys())
+        runnable = _iter_runnable(remaining, available)
+        if not runnable:
+            raise DeadEndError(_format_dead_end(remaining, available))
+        _detect_runnable_output_conflicts(runnable)
+
+        r = min(runnable, key=lambda x: x.idx)
+        required = {k: data_store[k] for k in r.step.inputs}
+        try:
+            out_bundle = _run_step_inline(r.step.transform, required)
+        except Exception as e:  # noqa: BLE001
+            raise PipelineExecutionError(
+                f"Step [{r.idx}] {r.step.name} failed: {e}"
+            ) from e
+
+        out_bundle = _validate_out_bundle(r.step, r.idx, out_bundle)
+        data_store.update(out_bundle)
+        remaining = [(i, s) for (i, s) in remaining if i != r.idx]
+    return data_store
+
+
+@dataclass(frozen=True, slots=True)
+class _ExecutorConfig:
+    executor: Executor
+    require_spec: bool
+
+
+def _make_executor(backend: Backend, max_workers: int | None) -> _ExecutorConfig:
+    if backend == "processes":
+        return _ExecutorConfig(
+            executor=ProcessPoolExecutor(max_workers=max_workers),
+            require_spec=True,
+        )
+    if backend == "threads":
+        return _ExecutorConfig(
+            executor=ThreadPoolExecutor(max_workers=max_workers),
+            require_spec=False,
+        )
+    raise ValueError(f"Unknown backend {backend!r}")
+
+
+def _submit_step(
+    *,
+    ex: Executor,
+    require_spec: bool,
+    data_store: Bundle,
+    r: _Runnable,
+) -> Future[dict[str, TimeSeries]]:
+    required = {k: data_store[k] for k in r.step.inputs}
+    if require_spec and not isinstance(r.step.transform, TransformSpec):
+        raise PipelineExecutionError(
+            f"Step [{r.idx}] {r.step.name} must use TransformSpec for processes backend"
+        )
+    if isinstance(r.step.transform, TransformSpec):
+        return ex.submit(_run_step_in_worker, r.step.transform, required)
+    return ex.submit(r.step.transform, required)
+
+
+def _collect_completed(
+    *,
+    pipeline: Pipeline,
+    futures: dict[int, Future[dict[str, TimeSeries]]],
+) -> list[tuple[int, dict[str, TimeSeries]]]:
+    completed: list[tuple[int, dict[str, TimeSeries]]] = []
+    for idx, fut in futures.items():
+        step_name = pipeline.steps[idx].name
+        try:
+            out_bundle = fut.result()
+        except Exception as e:  # noqa: BLE001
+            raise PipelineExecutionError(f"Step [{idx}] {step_name} failed: {e}") from e
+        completed.append(
+            (idx, _validate_out_bundle(pipeline.steps[idx], idx, out_bundle))
+        )
+    return completed
+
+
+def _execute_parallel(
+    *,
+    pipeline: Pipeline,
+    data_store: Bundle,
+    remaining: list[tuple[int, Step]],
+    backend: Backend,
+    max_workers: int | None,
+) -> Bundle:
+    cfg = _make_executor(backend, max_workers)
+    with cfg.executor as ex:
+        while remaining:
+            available = set(data_store.keys())
+            runnable = _iter_runnable(remaining, available)
+            if not runnable:
+                raise DeadEndError(_format_dead_end(remaining, available))
+            _detect_runnable_output_conflicts(runnable)
+
+            batch = _select_non_conflicting(runnable)
+            futures: dict[int, Future[dict[str, TimeSeries]]] = {}
+            for r in batch:
+                futures[r.idx] = _submit_step(
+                    ex=ex, require_spec=cfg.require_spec, data_store=data_store, r=r
+                )
+
+            completed = _collect_completed(pipeline=pipeline, futures=futures)
+            for idx, out_bundle in sorted(completed, key=lambda x: x[0]):
+                data_store.update(out_bundle)
+                remaining = [(i, s) for (i, s) in remaining if i != idx]
+    return data_store
+
+
 def execute(
     pipeline: Pipeline,
     initial_bundle: Bundle,
@@ -144,77 +278,12 @@ def execute(
     remaining: list[tuple[int, Step]] = list(enumerate(pipeline.steps))
 
     if not parallel:
-        while remaining:
-            available = set(data_store.keys())
-            runnable = _iter_runnable(remaining, available)
-            if not runnable:
-                raise DeadEndError(_format_dead_end(remaining, available))
-            _detect_runnable_output_conflicts(runnable)
-            r = min(runnable, key=lambda x: x.idx)
-            required = {k: data_store[k] for k in r.step.inputs}
-            try:
-                out_bundle = _run_step_inline(r.step.transform, required)
-            except Exception as e:  # noqa: BLE001
-                raise PipelineExecutionError(
-                    f"Step [{r.idx}] {r.step.name} failed: {e}"
-                ) from e
-            if not isinstance(out_bundle, dict):
-                raise PipelineExecutionError(
-                    f"Step [{r.idx}] {r.step.name} returned {type(out_bundle)!r}, expected dict"
-                )
-            data_store.update(out_bundle)
-            remaining = [(i, s) for (i, s) in remaining if i != r.idx]
-        return data_store
+        return _execute_serial(data_store, remaining)
 
-    if backend == "processes":
-        require_spec = True
-        executor: Executor = ProcessPoolExecutor(max_workers=max_workers)
-    elif backend == "threads":
-        require_spec = False
-        executor = ThreadPoolExecutor(max_workers=max_workers)
-    else:
-        raise ValueError(f"Unknown backend {backend!r}")
-
-    with executor as ex:
-        while remaining:
-            available = set(data_store.keys())
-            runnable = _iter_runnable(remaining, available)
-            if not runnable:
-                raise DeadEndError(_format_dead_end(remaining, available))
-            _detect_runnable_output_conflicts(runnable)
-
-            batch = _select_non_conflicting(runnable)
-            futures: dict[int, Future[dict[str, TimeSeries]]] = {}
-            for r in batch:
-                required = {k: data_store[k] for k in r.step.inputs}
-                if require_spec and not isinstance(r.step.transform, TransformSpec):
-                    raise PipelineExecutionError(
-                        f"Step [{r.idx}] {r.step.name} must use TransformSpec for processes backend"
-                    )
-                if isinstance(r.step.transform, TransformSpec):
-                    futures[r.idx] = ex.submit(
-                        _run_step_in_worker, r.step.transform, required
-                    )
-                else:
-                    futures[r.idx] = ex.submit(r.step.transform, required)
-
-            completed: list[tuple[int, dict[str, TimeSeries]]] = []
-            for idx, fut in futures.items():
-                step_name = pipeline.steps[idx].name
-                try:
-                    out_bundle = fut.result()
-                except Exception as e:  # noqa: BLE001
-                    raise PipelineExecutionError(
-                        f"Step [{idx}] {step_name} failed: {e}"
-                    ) from e
-                if not isinstance(out_bundle, dict):
-                    raise PipelineExecutionError(
-                        f"Step [{idx}] {step_name} returned {type(out_bundle)!r}, expected dict"
-                    )
-                completed.append((idx, out_bundle))
-
-            for idx, out_bundle in sorted(completed, key=lambda x: x[0]):
-                data_store.update(out_bundle)
-                remaining = [(i, s) for (i, s) in remaining if i != idx]
-
-    return data_store
+    return _execute_parallel(
+        pipeline=pipeline,
+        data_store=data_store,
+        remaining=remaining,
+        backend=backend,
+        max_workers=max_workers,
+    )
