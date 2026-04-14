@@ -16,6 +16,12 @@ To use the [CLI](user-guide/cli.md), install with the optional `cli` extra:
 uv add somnio --extra cli
 ```
 
+The `download-nsrr` command also needs the `nsrr` extra:
+
+```bash
+uv add somnio --extra cli --extra nsrr
+```
+
 ### With pip
 
 ```bash
@@ -26,6 +32,12 @@ For CLI support:
 
 ```bash
 pip install somnio[cli]
+```
+
+For `download-nsrr`:
+
+```bash
+pip install 'somnio[cli,nsrr]'
 ```
 
 For HDF5 signal layouts (`somnio.io.hdf5`, native and USleep formats):

@@ -1,30 +1,20 @@
-"""MNE ↔ :class:`~somnio.data.timeseries.TimeSeries` (optional ``mne`` dependency).
-
-Install with ``pip install somnio[edf]`` or ``pip install mne``.
-"""
+"""MNE ↔ :class:`~somnio.data.timeseries.TimeSeries`."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
 
 import numpy as np
 
 from somnio.data.timeseries import TimeSeries
+from somnio.utils.imports import MissingOptionalDependency
 
-if TYPE_CHECKING:
-    from mne.io import BaseRaw
-
-
-def import_mne():  # noqa: ANN201
-    """Import MNE or raise with an install hint."""
-    try:
-        import mne
-    except ImportError as exc:  # pragma: no cover - import guard
-        raise ImportError(
-            "somnio.data.adapters.mne requires MNE. Install with: pip install somnio[edf]"
-        ) from exc
-    return mne
+try:
+    import mne
+except ModuleNotFoundError as e:
+    if e.name != "mne":
+        raise
+    raise MissingOptionalDependency("mne", extra="edf", purpose="MNE adapter") from e
 
 
 def _normalize_channel_name(name: str) -> str:
@@ -32,7 +22,7 @@ def _normalize_channel_name(name: str) -> str:
 
 
 def _units_from_info(info: object) -> tuple[str, ...]:
-    from mne.io.constants import FIFF
+    FIFF = mne.io.constants.FIFF
 
     mapping = {
         int(FIFF.FIFF_UNIT_V): "V",
@@ -64,7 +54,7 @@ def _ch_types_for_units(units: tuple[str, ...]) -> list[str]:
     return types
 
 
-def from_mne_raw(raw: BaseRaw) -> TimeSeries:
+def from_mne_raw(raw: mne.io.BaseRaw) -> TimeSeries:
     """Convert a preloaded MNE :class:`~mne.io.BaseRaw` to :class:`~somnio.data.timeseries.TimeSeries`.
 
     Values are MNE's SI representation (e.g. Volts for EEG). Timestamps use
@@ -107,13 +97,12 @@ def from_mne_raw(raw: BaseRaw) -> TimeSeries:
     )
 
 
-def to_mne_raw(data: TimeSeries) -> BaseRaw:
+def to_mne_raw(data: TimeSeries) -> mne.io.BaseRaw:
     """Build an MNE :class:`~mne.io.RawArray` from ``data``.
 
     Requires ``data.sample_rate``. Sets ``meas_date`` from the first sample's
     Unix timestamp (any year MNE accepts).
     """
-    mne = import_mne()
     if data.sample_rate is None:
         raise ValueError("TimeSeries.sample_rate must be set for MNE Raw")
     if data.n_samples == 0:

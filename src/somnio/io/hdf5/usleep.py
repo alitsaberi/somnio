@@ -28,13 +28,16 @@ from typing import Any
 import numpy as np
 
 from somnio.data.timeseries import TimeSeries
+from somnio.utils.imports import MissingOptionalDependency
 
 try:
     import h5py
-except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "somnio.io.hdf5.usleep requires h5py. Install with: pip install somnio[hdf5]"
-    ) from exc
+except ModuleNotFoundError as e:
+    if e.name != "h5py":
+        raise
+    raise MissingOptionalDependency(
+        "h5py", extra="hdf5", purpose="USleep HDF5 I/O"
+    ) from e
 
 CHANNELS_GROUP = "channels"
 ATTR_SAMPLE_RATE = "sample_rate"

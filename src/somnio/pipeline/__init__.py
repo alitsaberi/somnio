@@ -6,16 +6,18 @@ without changing core semantics.
 
 from __future__ import annotations
 
-from .config import Pipeline, Step, TransformSpec
+from .types import Bundle, Pipeline, Step, Transform, TransformSpec
 from .engine import execute
 from .errors import DeadEndError, OutputConflictError, PipelineExecutionError
 
 __all__ = [
+    "Bundle",
     "DeadEndError",
     "OutputConflictError",
     "Pipeline",
     "PipelineExecutionError",
     "Step",
+    "Transform",
     "TransformSpec",
     "execute",
 ]

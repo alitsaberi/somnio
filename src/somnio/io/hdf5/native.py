@@ -8,13 +8,16 @@ from typing import Any, Mapping
 import numpy as np
 
 from somnio.data.timeseries import TimeSeries
+from somnio.utils.imports import MissingOptionalDependency
 
 try:
     import h5py
-except ImportError as exc:  # pragma: no cover - import guard
-    raise ImportError(
-        "somnio.io.hdf5.native requires h5py. Install with: pip install somnio[hdf5]"
-    ) from exc
+except ModuleNotFoundError as e:
+    if e.name != "h5py":
+        raise
+    raise MissingOptionalDependency(
+        "h5py", extra="hdf5", purpose="Native HDF5 I/O"
+    ) from e
 
 
 def _str_array_attrs(names: tuple[str, ...]) -> np.ndarray:

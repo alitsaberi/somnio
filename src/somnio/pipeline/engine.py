@@ -18,7 +18,8 @@ can be expensive for large arrays.
 ### Import-string transforms for robustness
 
 To keep multiprocessing stable across platforms/start methods, the processes
-backend requires `Step.transform` to be a `TransformSpec` (import string + kwargs)
+backend requires each `Step.transforms` entry to be a `TransformSpec`
+(import string + kwargs)
 so workers only receive primitives + data bundles. The threads backend can run
 direct callables (including closures), because it does not need pickling.
 
@@ -30,19 +31,27 @@ debugging, or a transform cannot be expressed as an import string.
 
 from __future__ import annotations
 
-import importlib
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from concurrent.futures import Executor, Future, ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Any
+from somnio.data.timeseries import TimeSeries
+from typing import Any, Literal
 
-from somnio.data import TimeSeries
-from somnio.pipeline.config import Backend, Bundle, Pipeline, Step, TransformSpec
+from somnio.pipeline.types import (
+    Bundle,
+    Pipeline,
+    Step,
+    TransformSpec,
+)
 from somnio.pipeline.errors import (
     DeadEndError,
     OutputConflictError,
     PipelineExecutionError,
 )
+from somnio.utils.imports import resolve_import_string
+
+
+Backend = Literal["processes", "threads"]
 
 
 def _validate_out_bundle(
@@ -52,39 +61,30 @@ def _validate_out_bundle(
         raise PipelineExecutionError(
             f"Step [{idx}] {step.name} returned {type(out_bundle)!r}, expected dict[str, TimeSeries]"
         )
+
     expected = set(step.outputs)
     got = set(out_bundle.keys())
     if got != expected:
         raise PipelineExecutionError(
             f"Step [{idx}] {step.name} returned keys {sorted(got)!r}, expected {sorted(expected)!r}"
         )
+
     for k, v in out_bundle.items():
         if not isinstance(k, str):
             raise PipelineExecutionError(
                 f"Step [{idx}] {step.name} returned non-str key {k!r}"
             )
+
         if not isinstance(v, TimeSeries):
             raise PipelineExecutionError(
                 f"Step [{idx}] {step.name} output {k!r} is {type(v)!r}, expected TimeSeries"
             )
+
     return out_bundle
 
 
-def _resolve_import_string(target: str) -> Callable[..., Any]:
-    if ":" not in target:
-        raise ValueError(
-            f"Invalid import string {target!r}; expected format 'pkg.module:callable'"
-        )
-    module_name, attr = target.split(":", 1)
-    mod = importlib.import_module(module_name)
-    fn = getattr(mod, attr, None)
-    if fn is None or not callable(fn):
-        raise ValueError(f"Import string {target!r} did not resolve to a callable")
-    return fn
-
-
 def _execute_transform(
-    transform: TransformSpec | Callable[[Bundle], Bundle],
+    spec: TransformSpec,
     required_bundle: dict[str, TimeSeries],
 ) -> dict[str, TimeSeries]:
     """Execute a transform on the required bundle.
@@ -92,10 +92,12 @@ def _execute_transform(
     This is intentionally top-level and import-string-friendly so it can be used
     in thread/process worker contexts.
     """
-    if isinstance(transform, TransformSpec):
-        fn = _resolve_import_string(transform.target)
-        return fn(required_bundle, **transform.kwargs)
-    return transform(required_bundle)
+    fn = (
+        resolve_import_string(spec.target)
+        if isinstance(spec.target, str)
+        else spec.target
+    )
+    return fn(required_bundle, **spec.kwargs)
 
 
 def _execute_step(
@@ -104,41 +106,10 @@ def _execute_step(
     step: Step,
     required_bundle: dict[str, TimeSeries],
 ) -> dict[str, TimeSeries]:
-    out_bundle = _execute_transform(step.transform, required_bundle)
-    return _validate_out_bundle(step, idx, out_bundle)
-
-
-def _execute_step_from_spec(
-    *,
-    idx: int,
-    step_name: str,
-    outputs: tuple[str, ...],
-    spec: TransformSpec,
-    required_bundle: dict[str, TimeSeries],
-) -> dict[str, TimeSeries]:
-    """Process-safe worker entrypoint (ships only import-string spec + metadata)."""
-    out_bundle = _execute_transform(spec, required_bundle)
-    # Validate without requiring a picklable Step instance.
-    if not isinstance(out_bundle, dict):
-        raise PipelineExecutionError(
-            f"Step [{idx}] {step_name} returned {type(out_bundle)!r}, expected dict[str, TimeSeries]"
-        )
-    expected = set(outputs)
-    got = set(out_bundle.keys())
-    if got != expected:
-        raise PipelineExecutionError(
-            f"Step [{idx}] {step_name} returned keys {sorted(got)!r}, expected {sorted(expected)!r}"
-        )
-    for k, v in out_bundle.items():
-        if not isinstance(k, str):
-            raise PipelineExecutionError(
-                f"Step [{idx}] {step_name} returned non-str key {k!r}"
-            )
-        if not isinstance(v, TimeSeries):
-            raise PipelineExecutionError(
-                f"Step [{idx}] {step_name} output {k!r} is {type(v)!r}, expected TimeSeries"
-            )
-    return out_bundle
+    current = required_bundle
+    for t in step.transforms:
+        current = _execute_transform(t, current)
+    return _validate_out_bundle(step, idx, current)
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,15 +153,18 @@ def _detect_runnable_output_conflicts(runnable: list[_Runnable]) -> None:
     for r in runnable:
         for out in r.step.outputs:
             by_output.setdefault(out, []).append(r)
+
     conflicts = {k: v for k, v in by_output.items() if len(v) > 1}
     if not conflicts:
         return
+
     lines: list[str] = ["Runnable output conflict detected:"]
     for out, rs in sorted(conflicts.items(), key=lambda kv: kv[0]):
         lines.append(
             f"- output {out!r} produced by: "
             + ", ".join(f"[{r.idx}] {r.step.name}" for r in rs)
         )
+
     raise OutputConflictError("\n".join(lines))
 
 
@@ -211,19 +185,23 @@ def _execute_serial(data_store: Bundle, remaining: list[tuple[int, Step]]) -> Bu
     while remaining:
         available = set(data_store.keys())
         runnable = _iter_runnable(remaining, available)
+
         if not runnable:
             raise DeadEndError(_format_dead_end(remaining, available))
 
         r = min(runnable, key=lambda x: x.idx)
         required = {k: data_store[k] for k in r.step.inputs}
+
         try:
             out_bundle = _execute_step(idx=r.idx, step=r.step, required_bundle=required)
         except Exception as e:  # noqa: BLE001
             raise PipelineExecutionError(
                 f"Step [{r.idx}] {r.step.name} failed: {e}"
             ) from e
+
         data_store.update(out_bundle)
         remaining = [(i, s) for (i, s) in remaining if i != r.idx]
+
     return data_store
 
 
@@ -255,22 +233,14 @@ def _submit_step(
     r: _Runnable,
 ) -> Future[dict[str, TimeSeries]]:
     required = {k: data_store[k] for k in r.step.inputs}
-    if require_spec and not isinstance(r.step.transform, TransformSpec):
-        raise PipelineExecutionError(
-            f"Step [{r.idx}] {r.step.name} must use TransformSpec for processes backend"
-        )
+
     if require_spec:
-        # Avoid shipping arbitrary callables / Step objects across process boundaries.
-        assert isinstance(r.step.transform, TransformSpec)
-        return ex.submit(
-            _execute_step_from_spec,
-            idx=r.idx,
-            step_name=r.step.name,
-            outputs=tuple(r.step.outputs),
-            spec=r.step.transform,
-            required_bundle=required,
-        )
-    # Threads backend can safely run the full in-memory step.
+        for t in r.step.transforms:
+            if not isinstance(t.target, str):
+                raise PipelineExecutionError(
+                    f"Step [{r.idx}] {r.step.name} must use import-string TransformSpec targets for processes backend"
+                )
+
     return ex.submit(_execute_step, idx=r.idx, step=r.step, required_bundle=required)
 
 
@@ -303,8 +273,10 @@ def _execute_parallel(
         while remaining:
             available = set(data_store.keys())
             runnable = _iter_runnable(remaining, available)
+
             if not runnable:
                 raise DeadEndError(_format_dead_end(remaining, available))
+
             _detect_runnable_output_conflicts(runnable)
 
             batch = _select_non_conflicting(runnable)
@@ -318,6 +290,7 @@ def _execute_parallel(
             for idx, out_bundle in sorted(completed, key=lambda x: x[0]):
                 data_store.update(out_bundle)
                 remaining = [(i, s) for (i, s) in remaining if i != idx]
+
     return data_store
 
 

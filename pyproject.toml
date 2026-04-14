@@ -44,18 +44,25 @@ Issues = "https://github.com/alitsaberi/somnio/issues"
 somnio = "somnio.cli.main:app"
 
 [project.optional-dependencies]
-hdf5 = ["h5py>=3.8"]
 cli = [
     "loguru>=0.7.3",
-    "python-dotenv>=1.0.0",
+    "typer>=0.21.1",
+]
+nsrr = [
     "requests>=2.31.0",
     "tqdm>=4.67.3",
-    "typer>=0.21.1",
+    "urllib3>=2.2.5",
+    "python-dotenv>=1.0.0",
+]
+schemas = [
+    "pydantic>=2.12.5",
+    "pyyaml>=6.0.3",
 ]
 edf = [
     "edfio>=0.4",
     "mne>=1.5",
 ]
+hdf5 = ["h5py>=3.8"]
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]

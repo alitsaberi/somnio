@@ -7,9 +7,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from somnio.utils.imports import MissingOptionalDependency
 
-from loguru import logger
-import typer
+try:
+    import typer
+    from loguru import logger
+except ModuleNotFoundError as e:
+    if e.name not in ("typer", "loguru"):
+        raise
+    raise MissingOptionalDependency(e.name, extra="cli", purpose="Somnio CLI") from e
 
 from .commands.nsrr import download as download_nsrr
 from .utils.logging import (

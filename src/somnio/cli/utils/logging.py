@@ -15,7 +15,6 @@ from types import FrameType
 
 from loguru import logger
 
-
 DEFAULT_STDERR_LOG_LEVEL = "INFO"
 DEFAULT_FILE_LOG_LEVEL = "DEBUG"
 DEFAULT_LOG_DIRECTORY = Path("logs")
