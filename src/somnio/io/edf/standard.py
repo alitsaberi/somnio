@@ -1,17 +1,24 @@
-"""Multiplexed single-file EDF layout via MNE (optional ``edf`` extra)."""
+"""Multiplexed single-file EDF layout via MNE."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from somnio.data.adapters.mne import from_mne_raw, import_mne, to_mne_raw
+from somnio.data.adapters.mne import from_mne_raw
 from somnio.data.timeseries import TimeSeries
 
-from somnio.io.edf.utils import (
-    ensure_export_edf_deps,
-    require_edf_compatible_timestamps,
-)
+from somnio.io.edf.utils import write_edf
+from somnio.utils.imports import MissingOptionalDependency
+
+try:
+    import mne
+except ModuleNotFoundError as e:
+    if e.name != "mne":
+        raise
+    raise MissingOptionalDependency(
+        "mne", extra="edf", purpose="Standard EDF I/O"
+    ) from e
 
 
 def read(
@@ -33,12 +40,9 @@ def read(
         units: Optional channel units hint forwarded to
             :func:`mne.io.read_raw_edf` when the file lacks unit metadata.
     """
-    import_mne()
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(path)
-
-    from mne.io import read_raw_edf
 
     kwargs: dict[str, Any] = {
         "preload": preload,
@@ -47,7 +51,7 @@ def read(
     if units is not None:
         kwargs["units"] = units
 
-    raw = read_raw_edf(path, **kwargs)
+    raw = mne.io.read_raw_edf(path, **kwargs)
     return from_mne_raw(raw)
 
 
@@ -58,21 +62,16 @@ def write(
     overwrite: bool = False,
     verbose: str | bool | None = None,
 ) -> None:
-    """Write ``data`` to a single EDF file using MNE's exporter (``edfio`` backend).
+    """Write ``data`` to a single EDF file.
 
     Requires ``data.sample_rate``. Measurement date is taken from the first sample
     timestamp.
     """
-    ensure_export_edf_deps()
-    require_edf_compatible_timestamps(data)
     path = Path(path)
     if path.exists() and not overwrite:
         raise FileExistsError(f"{path} exists (pass overwrite=True)")
     path.parent.mkdir(parents=True, exist_ok=True)
-
-    mne = import_mne()
-    raw = to_mne_raw(data)
-    mne.export.export_raw(path, raw, overwrite=overwrite, verbose=verbose)
+    write_edf(path, data, overwrite=overwrite, verbose=verbose)
 
 
 class StandardEDFReader:

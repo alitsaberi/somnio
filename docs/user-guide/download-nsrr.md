@@ -12,6 +12,10 @@ See [CLI](../reference/cli.md) for the full reference.
 
 ## Before you start
 
+### Install extras
+
+`download-nsrr` is a CLI command and requires both the `cli` and `nsrr` extras (see [Installation](../getting-started.md)). 
+
 ### Get an NSRR token
 
 - Create an account at [sleepdata.org](https://sleepdata.org/).

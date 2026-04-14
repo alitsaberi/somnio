@@ -1,52 +1,61 @@
-"""Configuration objects for `somnio.pipeline`.
-
-Design goals:
-- Keep configs trivially serializable (dataclasses of primitives).
-- Allow "import-string" transform specs for process-based execution.
-"""
+"""Runtime types for `somnio.pipeline`."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Protocol, runtime_checkable
 
 from somnio.data import TimeSeries
 
 Bundle = dict[str, TimeSeries]
-Backend = Literal["processes", "threads"]
-Transform = Callable[[Bundle], Bundle]
+
+
+@runtime_checkable
+class Transform(Protocol):
+    """Protocol for pipeline transforms.
+
+    A transform maps a bundle of named `TimeSeries` to another bundle.
+    Any callable matching the signature ``(bundle: Bundle, **kwargs) -> Bundle``
+    satisfies this protocol structurally — no inheritance required.
+    """
+
+    def __call__(
+        self, bundle: Bundle, /, **kwargs: Any
+    ) -> Bundle: ...  # pragma: no cover
 
 
 @dataclass(frozen=True, slots=True)
 class TransformSpec:
-    """Import-string transform specification.
+    """Specification for a single transform.
+
+    `target` is either an import string (``"pkg.module:callable"``) that resolves to a `Transform` instance or a `Transform` instance itself.
 
     Attributes:
-        target: Import string in the form "pkg.module:callable".
-        kwargs: Keyword arguments passed to the callable.
+        target: Import string ``"pkg.module:callable"`` or a `Transform` instance.
+        kwargs: Keyword arguments forwarded to the transform on every invocation.
     """
 
-    target: str
+    target: str | Transform
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
 class Step:
-    """A single pipeline step: Bundle -> Bundle.
+    """A single pipeline step: ``Bundle -> Bundle``.
 
     Attributes:
         name: Human-readable identifier (used in diagnostics).
         inputs: Names required to exist in the data store for this step to run.
         outputs: Names that this step will produce (reserved for conflict checks).
-        transform: Either an import-string TransformSpec (recommended), or a
-            direct callable (only safe for in-process execution).
+        transforms: One or more `TransformSpec` instances executed in order
+            (bundle piping).  Use import-string targets for ``backend="processes"``;
+            callable targets are safe for serial and threads backends.
     """
 
     name: str
     inputs: tuple[str, ...]
     outputs: tuple[str, ...]
-    transform: TransformSpec | Transform
+    transforms: tuple[TransformSpec, ...]
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -61,6 +70,8 @@ class Step:
             raise ValueError(
                 f"Step.outputs must be non-empty strings for {self.name!r}"
             )
+        if len(self.transforms) == 0:
+            raise ValueError(f"Step.transforms must be non-empty for {self.name!r}")
 
 
 @dataclass(frozen=True, slots=True)

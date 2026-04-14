@@ -1832,9 +1832,6 @@ dependencies = [
 [package.optional-dependencies]
 cli = [
     { name = "loguru" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "tqdm" },
     { name = "typer" },
 ]
 edf = [
@@ -1843,6 +1840,16 @@ edf = [
 ]
 hdf5 = [
     { name = "h5py" },
+]
+nsrr = [
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "tqdm" },
+    { name = "urllib3" },
+]
+schemas = [
+    { name = "pydantic" },
+    { name = "pyyaml" },
 ]
 
 [package.dev-dependencies]
@@ -1881,12 +1888,15 @@ requires-dist = [
     { name = "loguru", marker = "extra == 'cli'", specifier = ">=0.7.3" },
     { name = "mne", marker = "extra == 'edf'", specifier = ">=1.5" },
     { name = "numpy", specifier = ">=1.24" },
-    { name = "python-dotenv", marker = "extra == 'cli'", specifier = ">=1.0.0" },
-    { name = "requests", marker = "extra == 'cli'", specifier = ">=2.31.0" },
-    { name = "tqdm", marker = "extra == 'cli'", specifier = ">=4.67.3" },
+    { name = "pydantic", marker = "extra == 'schemas'", specifier = ">=2.12.5" },
+    { name = "python-dotenv", marker = "extra == 'nsrr'", specifier = ">=1.0.0" },
+    { name = "pyyaml", marker = "extra == 'schemas'", specifier = ">=6.0.3" },
+    { name = "requests", marker = "extra == 'nsrr'", specifier = ">=2.31.0" },
+    { name = "tqdm", marker = "extra == 'nsrr'", specifier = ">=4.67.3" },
     { name = "typer", marker = "extra == 'cli'", specifier = ">=0.21.1" },
+    { name = "urllib3", marker = "extra == 'nsrr'", specifier = ">=2.2.5" },
 ]
-provides-extras = ["hdf5", "cli", "edf"]
+provides-extras = ["cli", "nsrr", "schemas", "edf", "hdf5"]
 
 [package.metadata.requires-dev]
 dev = [

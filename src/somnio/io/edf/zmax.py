@@ -1,4 +1,4 @@
-"""ZMax-style directory of per-channel EDF files (optional ``edf`` extra)."""
+"""ZMax-style directory of per-channel EDF files."""
 
 from __future__ import annotations
 
@@ -8,13 +8,18 @@ from typing import Any, Sequence
 
 import numpy as np
 
-from somnio.data.adapters.mne import from_mne_raw, import_mne, to_mne_raw
+from somnio.data.adapters.mne import from_mne_raw
 from somnio.data.timeseries import TimeSeries
 
-from somnio.io.edf.utils import (
-    ensure_export_edf_deps,
-    require_edf_compatible_timestamps,
-)
+from somnio.io.edf.utils import write_edf
+from somnio.utils.imports import MissingOptionalDependency
+
+try:
+    import mne
+except ModuleNotFoundError as e:
+    if e.name != "mne":
+        raise
+    raise MissingOptionalDependency("mne", extra="edf", purpose="ZMax EDF I/O") from e
 
 
 def _discover_edf_stems(root: Path) -> list[str]:
@@ -30,12 +35,10 @@ def _read_raw_edf(
     verbose: str | bool | None,
     units: dict[str, str] | str | None,
 ) -> Any:
-    from mne.io import read_raw_edf
-
     kwargs: dict[str, Any] = {"preload": preload, "verbose": verbose}
     if units is not None:
         kwargs["units"] = units
-    return read_raw_edf(path, **kwargs)
+    return mne.io.read_raw_edf(path, **kwargs)
 
 
 def read(
@@ -69,7 +72,6 @@ def read(
         verbose: MNE verbosity.
         units: Optional channel units hint forwarded to :func:`mne.io.read_raw_edf`.
     """
-    import_mne()
     root = Path(path)
     if not root.is_dir():
         raise NotADirectoryError(root)
@@ -145,9 +147,7 @@ def write(
     (verbatim). Use ``channel_to_stem`` to override: keys are ``TimeSeries``
     channel names, values are filename stems (no ``.edf``).
     """
-    ensure_export_edf_deps()
-    require_edf_compatible_timestamps(data)
-    mne = import_mne()
+
     root = Path(path)
     root.mkdir(parents=True, exist_ok=True)
 
@@ -159,8 +159,7 @@ def write(
         if fp.exists() and not overwrite:
             raise FileExistsError(f"{fp} exists (pass overwrite=True)")
         sub = data.select_channels([name])
-        raw = to_mne_raw(sub)
-        mne.export.export_raw(fp, raw, overwrite=True, verbose=verbose)
+        write_edf(fp, sub, overwrite=True, verbose=verbose)
 
 
 class ZMaxMultiEDFReader:

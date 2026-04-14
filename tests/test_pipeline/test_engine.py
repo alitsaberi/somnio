@@ -82,24 +82,26 @@ def test_fan_out_then_downstream_dependency_serial() -> None:
                 name="fanout_a",
                 inputs=("x",),
                 outputs=("a",),
-                transform=TransformSpec(
-                    __name__ + ":copy_to", {"src": "x", "dst": "a"}
+                transforms=(
+                    TransformSpec(__name__ + ":copy_to", {"src": "x", "dst": "a"}),
                 ),
             ),
             Step(
                 name="fanout_b",
                 inputs=("x",),
                 outputs=("b",),
-                transform=TransformSpec(
-                    __name__ + ":copy_to", {"src": "x", "dst": "b"}
+                transforms=(
+                    TransformSpec(__name__ + ":copy_to", {"src": "x", "dst": "b"}),
                 ),
             ),
             Step(
                 name="join",
                 inputs=("a", "b"),
                 outputs=("y",),
-                transform=TransformSpec(
-                    __name__ + ":sum_two", {"a": "a", "b": "b", "out": "y"}
+                transforms=(
+                    TransformSpec(
+                        __name__ + ":sum_two", {"a": "a", "b": "b", "out": "y"}
+                    ),
                 ),
             ),
         ]
@@ -116,18 +118,22 @@ def test_parallel_threads_runs_concurrently() -> None:
                 name="sleep_copy_a",
                 inputs=("x",),
                 outputs=("a",),
-                transform=TransformSpec(
-                    __name__ + ":sleep_then_copy",
-                    {"src": "x", "dst": "a", "seconds": 0.25},
+                transforms=(
+                    TransformSpec(
+                        __name__ + ":sleep_then_copy",
+                        {"src": "x", "dst": "a", "seconds": 0.25},
+                    ),
                 ),
             ),
             Step(
                 name="sleep_copy_b",
                 inputs=("x",),
                 outputs=("b",),
-                transform=TransformSpec(
-                    __name__ + ":sleep_then_copy",
-                    {"src": "x", "dst": "b", "seconds": 0.25},
+                transforms=(
+                    TransformSpec(
+                        __name__ + ":sleep_then_copy",
+                        {"src": "x", "dst": "b", "seconds": 0.25},
+                    ),
                 ),
             ),
         ]
@@ -149,16 +155,18 @@ def test_output_conflict_detection_for_runnable_steps() -> None:
                 name="write_same_1",
                 inputs=("x",),
                 outputs=("y",),
-                transform=TransformSpec(
-                    __name__ + ":copy_to", {"src": "x", "dst": "y"}
+                transforms=(
+                    TransformSpec(__name__ + ":copy_to", {"src": "x", "dst": "y"}),
                 ),
             ),
             Step(
                 name="write_same_2",
                 inputs=("x",),
                 outputs=("y",),
-                transform=TransformSpec(
-                    __name__ + ":add_constant", {"key": "x", "constant": 1.0}
+                transforms=(
+                    TransformSpec(
+                        __name__ + ":add_constant", {"key": "x", "constant": 1.0}
+                    ),
                 ),
             ),
         ]
@@ -174,8 +182,10 @@ def test_dead_end_diagnostics() -> None:
                 name="needs_missing",
                 inputs=("missing",),
                 outputs=("y",),
-                transform=TransformSpec(
-                    __name__ + ":copy_to", {"src": "missing", "dst": "y"}
+                transforms=(
+                    TransformSpec(
+                        __name__ + ":copy_to", {"src": "missing", "dst": "y"}
+                    ),
                 ),
             )
         ]
@@ -191,9 +201,11 @@ def test_bundle_contract_only_required_inputs_passed() -> None:
                 name="copy_only_x",
                 inputs=("x",),
                 outputs=("y",),
-                transform=TransformSpec(
-                    __name__ + ":assert_only_keys_then_copy",
-                    {"expected": ("x",), "src": "x", "dst": "y"},
+                transforms=(
+                    TransformSpec(
+                        __name__ + ":assert_only_keys_then_copy",
+                        {"expected": ("x",), "src": "x", "dst": "y"},
+                    ),
                 ),
             ),
         ]
@@ -215,16 +227,16 @@ def test_bundle_contract_allows_heterogeneous_sample_rates() -> None:
                 name="copy_x",
                 inputs=("x",),
                 outputs=("x2",),
-                transform=TransformSpec(
-                    __name__ + ":copy_to", {"src": "x", "dst": "x2"}
+                transforms=(
+                    TransformSpec(__name__ + ":copy_to", {"src": "x", "dst": "x2"}),
                 ),
             ),
             Step(
                 name="copy_y",
                 inputs=("y",),
                 outputs=("y2",),
-                transform=TransformSpec(
-                    __name__ + ":copy_to", {"src": "y", "dst": "y2"}
+                transforms=(
+                    TransformSpec(__name__ + ":copy_to", {"src": "y", "dst": "y2"}),
                 ),
             ),
         ]
@@ -255,8 +267,8 @@ def test_parallel_processes_smoke_with_import_string_transform() -> None:
                 name="copy_x",
                 inputs=("x",),
                 outputs=("y",),
-                transform=TransformSpec(
-                    __name__ + ":copy_to", {"src": "x", "dst": "y"}
+                transforms=(
+                    TransformSpec(__name__ + ":copy_to", {"src": "x", "dst": "y"}),
                 ),
             )
         ]
