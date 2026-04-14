@@ -5,12 +5,23 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+
+from somnio.utils.imports import MissingOptionalDependency
+
 import typer
 from loguru import logger
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-import requests
-from tqdm import tqdm
+
+try:
+    import requests
+    from requests.adapters import HTTPAdapter
+    from tqdm import tqdm
+    from urllib3.util.retry import Retry
+except ModuleNotFoundError as e:
+    if e.name not in ("requests", "tqdm", "urllib3"):
+        raise
+    raise MissingOptionalDependency(
+        e.name, extra="nsrr", purpose="NSRR download"
+    ) from e
 
 
 DEFAULT_HTTP_RETRIES = 6
@@ -25,7 +36,7 @@ DOWNLOAD_RETRY_EXCEPTIONS = (
 )
 
 
-def _build_session(http_retries: int = DEFAULT_HTTP_RETRIES) -> requests.Session:
+def _build_session(http_retries: int = DEFAULT_HTTP_RETRIES) -> "requests.Session":
     """Create a requests Session with retries for transient NSRR issues.
 
     NSRR occasionally returns 502/503/504; we retry those with exponential backoff.
@@ -49,7 +60,7 @@ def _build_session(http_retries: int = DEFAULT_HTTP_RETRIES) -> requests.Session
 
 
 def _fetch_directory_listing(
-    session: requests.Session,
+    session: "requests.Session",
     slug: str,
     token: str,
     path: str | None = None,
@@ -72,7 +83,7 @@ def _fetch_directory_listing(
 
 
 def _collect_all_files(
-    session: requests.Session,
+    session: "requests.Session",
     slug: str,
     token: str,
     path: str | None = None,
@@ -94,7 +105,7 @@ def _collect_all_files(
 
 
 def _download_file(
-    session: requests.Session,
+    session: "requests.Session",
     slug: str,
     token: str,
     file_obj: dict,
