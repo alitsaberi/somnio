@@ -28,6 +28,7 @@ from typing import Any
 import numpy as np
 
 from somnio.data.timeseries import TimeSeries
+from somnio.data.units import parse_unit_or
 from somnio.utils.imports import MissingOptionalDependency
 
 try:
@@ -148,21 +149,14 @@ def read(path: Path | str) -> TimeSeries:
         n = series[0].shape[0]
         timestamps = start_ns + step * np.arange(n, dtype=np.int64)
 
-        units_list: list[str] = []
-        for name in names:
-            ds = ch_root[name]
-            u = ds.attrs.get("unit", b"")
-            if isinstance(u, bytes):
-                units_list.append(u.decode("utf-8"))
-            else:
-                units_list.append(str(u))
+        units = tuple(parse_unit_or(ch_root[name].attrs.get("unit")) for name in names)
 
         values = np.column_stack(series)
         return TimeSeries(
             values=values,
             timestamps=timestamps,
             channel_names=tuple(str(n) for n in names),
-            units=tuple(units_list),
+            units=units,
             sample_rate=sample_rate,
         )
 
@@ -207,7 +201,7 @@ def write(path: Path | str, data: TimeSeries) -> None:
                 shuffle=True,
             )
             ds.attrs[ATTR_CHANNEL_INDEX] = j
-            ds.attrs["unit"] = data.units[j]
+            ds.attrs["unit"] = str(data.units[j])
 
 
 class USleepHDF5Reader:

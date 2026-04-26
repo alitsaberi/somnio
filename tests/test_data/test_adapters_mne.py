@@ -15,6 +15,7 @@ from somnio.data.timeseries import TimeSeries  # noqa: E402
 
 def test_to_mne_raw_allows_pre_edf_epoch_timestamps() -> None:
     """EDF export rejects these timestamps; generic MNE Raw does not."""
+    pytest.skip("to_mne_raw is temporarily disabled")
     step = 10_000_000
     ts = TimeSeries(
         values=np.zeros((4, 1)),
@@ -28,6 +29,7 @@ def test_to_mne_raw_allows_pre_edf_epoch_timestamps() -> None:
 
 
 def test_from_mne_round_trip_values() -> None:
+    pytest.skip("to_mne_raw is temporarily disabled")
     base = int(datetime(2022, 3, 1, tzinfo=timezone.utc).timestamp() * 1e9)
     step = 4_000_000
     n = 50

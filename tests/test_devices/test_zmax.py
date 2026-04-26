@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from somnio.data.timeseries import Sample
+from somnio.data.units import V
 from somnio.devices.zmax import (
     ConnectionClosedError,
     DataType,
@@ -171,7 +172,7 @@ def test_zmax_read(mock_socket):
 
     assert isinstance(sample, Sample)
     assert sample.channel_names == ("EEG_RIGHT", "EEG_LEFT")
-    assert sample.units == ("V", "V")
+    assert sample.units == (V, V)
     assert sample.values.shape == (2,)
     assert sample.values.dtype == np.float64
 

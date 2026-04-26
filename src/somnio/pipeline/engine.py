@@ -34,11 +34,12 @@ from __future__ import annotations
 from collections.abc import Iterable
 from concurrent.futures import Executor, Future, ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
-from somnio.data.timeseries import TimeSeries
 from typing import Any, Literal
 
+from somnio.data import Epochs, Event, TimeSeries
 from somnio.pipeline.types import (
     Bundle,
+    OutputValue,
     Pipeline,
     Step,
     TransformSpec,
@@ -56,10 +57,10 @@ Backend = Literal["processes", "threads"]
 
 def _validate_out_bundle(
     step: Step, idx: int, out_bundle: Any
-) -> dict[str, TimeSeries]:
+) -> dict[str, OutputValue]:
     if not isinstance(out_bundle, dict):
         raise PipelineExecutionError(
-            f"Step [{idx}] {step.name} returned {type(out_bundle)!r}, expected dict[str, TimeSeries]"
+            f"Step [{idx}] {step.name} returned {type(out_bundle)!r}, expected dict[str, TimeSeries | Epochs | list[Event]]"
         )
 
     expected = set(step.outputs)
@@ -75,18 +76,28 @@ def _validate_out_bundle(
                 f"Step [{idx}] {step.name} returned non-str key {k!r}"
             )
 
-        if not isinstance(v, TimeSeries):
-            raise PipelineExecutionError(
-                f"Step [{idx}] {step.name} output {k!r} is {type(v)!r}, expected TimeSeries"
-            )
+        if isinstance(v, (TimeSeries, Epochs)):
+            continue
+
+        if isinstance(v, list):
+            bad = next((e for e in v if not isinstance(e, Event)), None)
+            if bad is not None:
+                raise PipelineExecutionError(
+                    f"Step [{idx}] {step.name} output {k!r} contains {type(bad)!r}, expected Event"
+                )
+            continue
+
+        raise PipelineExecutionError(
+            f"Step [{idx}] {step.name} output {k!r} is {type(v)!r}, expected TimeSeries | Epochs | list[Event]"
+        )
 
     return out_bundle
 
 
 def _execute_transform(
     spec: TransformSpec,
-    required_bundle: dict[str, TimeSeries],
-) -> dict[str, TimeSeries]:
+    required_bundle: Bundle,
+) -> Bundle:
     """Execute a transform on the required bundle.
 
     This is intentionally top-level and import-string-friendly so it can be used
@@ -104,8 +115,8 @@ def _execute_step(
     *,
     idx: int,
     step: Step,
-    required_bundle: dict[str, TimeSeries],
-) -> dict[str, TimeSeries]:
+    required_bundle: Bundle,
+) -> Bundle:
     current = required_bundle
     for t in step.transforms:
         current = _execute_transform(t, current)
@@ -231,7 +242,7 @@ def _submit_step(
     require_spec: bool,
     data_store: Bundle,
     r: _Runnable,
-) -> Future[dict[str, TimeSeries]]:
+) -> Future[dict[str, OutputValue]]:
     required = {k: data_store[k] for k in r.step.inputs}
 
     if require_spec:
@@ -247,9 +258,9 @@ def _submit_step(
 def _collect_completed(
     *,
     pipeline: Pipeline,
-    futures: dict[int, Future[dict[str, TimeSeries]]],
-) -> list[tuple[int, dict[str, TimeSeries]]]:
-    completed: list[tuple[int, dict[str, TimeSeries]]] = []
+    futures: dict[int, Future[dict[str, OutputValue]]],
+) -> list[tuple[int, dict[str, OutputValue]]]:
+    completed: list[tuple[int, dict[str, OutputValue]]] = []
     for idx, fut in futures.items():
         step_name = pipeline.steps[idx].name
         try:
@@ -280,7 +291,7 @@ def _execute_parallel(
             _detect_runnable_output_conflicts(runnable)
 
             batch = _select_non_conflicting(runnable)
-            futures: dict[int, Future[dict[str, TimeSeries]]] = {}
+            futures: dict[int, Future[dict[str, OutputValue]]] = {}
             for r in batch:
                 futures[r.idx] = _submit_step(
                     ex=ex, require_spec=cfg.require_spec, data_store=data_store, r=r

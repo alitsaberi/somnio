@@ -48,6 +48,12 @@ cli = [
     "loguru>=0.7.3",
     "typer>=0.21.1",
 ]
+signal = [
+    "scipy>=1.11",
+]
+mne = [
+    "mne>=1.5",
+]
 nsrr = [
     "requests>=2.31.0",
     "tqdm>=4.67.3",

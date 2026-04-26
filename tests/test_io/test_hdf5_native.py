@@ -61,7 +61,7 @@ def test_native_read_all(tmp_path: Path) -> None:
                 ts.channel_names, dtype=h5py.string_dtype(encoding="utf-8")
             )
             g.attrs["units"] = np.array(
-                ts.units, dtype=h5py.string_dtype(encoding="utf-8")
+                [str(u) for u in ts.units], dtype=h5py.string_dtype(encoding="utf-8")
             )
             if ts.sample_rate is not None:
                 g.attrs["sample_rate"] = ts.sample_rate
