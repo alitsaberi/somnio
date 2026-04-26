@@ -6,8 +6,6 @@ Conventions (authoritative for all of somnio):
 - Timestamps: int64 nanoseconds since Unix epoch (1970-01-01T00:00:00 UTC).
 - Values dtype: float64.
 - Physical units: SI base units tracked per-channel via ``units`` field.
-  Use SI symbols: ``"V"`` (not ``"uV"``), ``"m/s^2"`` (not ``"g"``),
-  ``"degC"`` for temperature.
 - sample_rate: float in Hz when nominally regularly sampled, or None for
   irregular/unknown data. Timestamps remain authoritative; a specific file
   format may still require an exact spacing (see that format's writer).
@@ -23,6 +21,8 @@ from functools import cached_property
 
 import numpy as np
 
+from somnio.data.units import UNKNOWN, Unit, parse_unit_or
+
 
 @dataclass
 class Sample:
@@ -34,19 +34,21 @@ class Sample:
         values: Measurement values, shape ``(n_channels,)``, dtype float64.
         timestamp: Acquisition time in nanoseconds since Unix epoch.
         channel_names: Unique channel identifiers, length == n_channels.
-        units: Physical unit per channel (SI symbols), length == n_channels.
-            e.g. ``["V", "V", "m/s^2", "m/s^2", "m/s^2", "degC"]``.
+        units: Physical unit per channel, length == n_channels.
+            Prefer SI base units. For example: ``["V", "V", "m/s^2", "degC"]``.
     """
 
     values: np.ndarray
     timestamp: int
     channel_names: tuple[str, ...]
-    units: tuple[str, ...]
+    units: tuple[Unit, ...]
 
     def __post_init__(self) -> None:
         self.values = np.asarray(self.values, dtype=np.float64)
         self.channel_names = tuple(self.channel_names)
-        self.units = tuple(self.units)
+        # Accept either Unit objects or unit symbol strings.
+        # Be tolerant to missing/unknown external metadata.
+        self.units = tuple(parse_unit_or(u, default=UNKNOWN) for u in self.units)  # type: ignore[arg-type]
         if self.values.ndim != 1:
             raise ValueError(
                 f"values must be 1-D (n_channels,), got shape {self.values.shape}"
@@ -77,7 +79,7 @@ class TimeSeries:
         timestamps: Per-sample acquisition time, shape ``(n_samples,)``, dtype int64.
             Nanoseconds since Unix epoch. Monotonically non-decreasing.
         channel_names: Unique channel identifiers, length == n_channels.
-        units: Physical unit per channel (SI symbols), length == n_channels.
+        units: Physical unit per channel, length == n_channels.
         sample_rate: Nominal sample rate in Hz when data are intended to be
             regularly spaced, or None for irregular/unknown sampling.
     """
@@ -85,14 +87,16 @@ class TimeSeries:
     values: np.ndarray
     timestamps: np.ndarray
     channel_names: tuple[str, ...]
-    units: tuple[str, ...]
+    units: tuple[Unit, ...]
     sample_rate: float | None = None
 
     def __post_init__(self) -> None:
         self.values = np.asarray(self.values, dtype=np.float64)
         self.timestamps = np.asarray(self.timestamps, dtype=np.int64)
         self.channel_names = tuple(self.channel_names)
-        self.units = tuple(self.units)
+        # Accept either Unit objects or unit symbol strings.
+        # Be tolerant to missing/unknown external metadata.
+        self.units = tuple(parse_unit_or(u, default=UNKNOWN) for u in self.units)  # type: ignore[arg-type]
 
         if self.values.ndim != 2:
             raise ValueError(

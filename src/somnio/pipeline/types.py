@@ -5,9 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
-from somnio.data import TimeSeries
+from somnio.data import Epochs, Event, TimeSeries
 
-Bundle = dict[str, TimeSeries]
+OutputValue = TimeSeries | Epochs | list[Event]
+Bundle = dict[str, OutputValue]
 
 
 @runtime_checkable

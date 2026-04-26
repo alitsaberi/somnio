@@ -8,34 +8,42 @@ from typing import Any
 import numpy as np
 
 
+def _require_int_ns(name: str, value: object) -> int:
+    if isinstance(value, (int, np.integer)):
+        return int(value)
+    raise TypeError(
+        f"{name} must be an integer nanosecond value, got {type(value).__name__}"
+    )
+
+
 @dataclass
 class Event:
     """A single annotated occurrence with arbitrary properties.
 
     Attributes:
-        onset: Start time in seconds from recording start.
-        duration: Duration in seconds (0.0 for instantaneous events).
-        description: Event type/label (e.g., "N2", "arousal", "stimulus").
+        onset: Start time in int nanoseconds since Unix epoch.
+        duration: Duration in int nanoseconds (0 for instantaneous events).
+        type: Event semantic type/family (e.g., "sleep_stage", "arousal", "eye_movement").
+        label: Optional event label/value (e.g., "N2", "L", "R", 2).
         extras: Arbitrary per-event metadata (e.g., {"confidence": 0.95}).
     """
 
-    onset: float
-    duration: float
-    description: str
+    onset: int
+    duration: int
+    type: str
+    label: str | int | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self.onset = float(self.onset)
-        self.duration = float(self.duration)
-        self.description = str(self.description)
-        if not np.isfinite(self.onset):
-            raise ValueError(f"onset must be finite, got {self.onset!r}")
-        if not np.isfinite(self.duration):
-            raise ValueError(f"duration must be finite, got {self.duration!r}")
+        self.onset = _require_int_ns("onset", self.onset)
+        self.duration = _require_int_ns("duration", self.duration)
+        self.type = str(self.type)
         if self.onset < 0:
             raise ValueError(f"onset must be >= 0, got {self.onset}")
         if self.duration < 0:
             raise ValueError(f"duration must be >= 0, got {self.duration}")
+        if not self.type:
+            raise ValueError("type must be non-empty")
 
         if not isinstance(self.extras, dict):
             raise ValueError("extras must be a dict")
@@ -53,23 +61,17 @@ class Epochs:
 
     Attributes:
         labels: Label per epoch, shape ``(n_epochs,)``. Typically string or int.
-        period_length: Duration of each epoch in seconds (e.g., 30.0).
-        onset: Start time of the first epoch in seconds from recording start.
+        period_length: Duration of each epoch in int nanoseconds (e.g., 30e9).
+        onset: Start time of the first epoch in int nanoseconds since Unix epoch.
     """
 
     labels: np.ndarray
-    period_length: float
-    onset: float = 0.0
+    period_length: int
+    onset: int = 0
 
     def __post_init__(self) -> None:
-        self.period_length = float(self.period_length)
-        self.onset = float(self.onset)
-        if not np.isfinite(self.onset):
-            raise ValueError(f"onset must be finite, got {self.onset!r}")
-        if not np.isfinite(self.period_length):
-            raise ValueError(
-                f"period_length must be finite, got {self.period_length!r}"
-            )
+        self.period_length = _require_int_ns("period_length", self.period_length)
+        self.onset = _require_int_ns("onset", self.onset)
         if self.period_length <= 0:
             raise ValueError(f"period_length must be > 0, got {self.period_length!r}")
         if self.onset < 0:
@@ -103,54 +105,42 @@ def epochs_to_events(epochs: Epochs) -> list[Event]:
     Each epoch becomes an ``Event`` with:
     - ``onset = epochs.onset + i * epochs.period_length``
     - ``duration = epochs.period_length``
-    - ``description = str(epochs.labels[i])``
+    - ``type = "epoch"``
+    - ``label = epochs.labels[i]`` (int-like labels stay int; otherwise str)
     """
 
     events: list[Event] = []
     step = epochs.period_length
     for i, label in enumerate(epochs.labels):
+        if isinstance(label, (np.integer,)):
+            event_label: int | str = int(label)
+        else:
+            event_label = str(label)
         events.append(
             Event(
                 onset=epochs.onset + i * step,
                 duration=step,
-                description=str(label),
+                type="epoch",
+                label=event_label,
             )
         )
     return events
 
 
-def _parse_int_label(description: str) -> int | None:
-    """Return integer value when `description` is an int-like string."""
-
-    s = description.strip()
-    if s.startswith("+"):
-        s = s[1:]
-    if s.startswith("-"):
-        rest = s[1:]
-        if rest.isdigit():
-            return -int(rest)
-        return None
-    if s.isdigit():
-        return int(s)
-    return None
-
-
-def events_to_epochs(events: list[Event], period_length: float) -> Epochs:
+def events_to_epochs(events: list[Event], period_length: int) -> Epochs:
     """Collapse contiguous fixed-duration events into an :class:`Epochs`.
 
     Args:
         events: Events with fixed duration equal to ``period_length``.
             They must be contiguous with step size ``period_length`` when sorted
             by onset.
-        period_length: Fixed epoch duration in seconds.
+        period_length: Fixed epoch duration in int nanoseconds.
     """
 
     if len(events) == 0:
         raise ValueError("events must be non-empty")
 
-    step = float(period_length)
-    if not np.isfinite(step):
-        raise ValueError(f"period_length must be finite, got {period_length!r}")
+    step = int(period_length)
     if step <= 0:
         raise ValueError(f"period_length must be > 0, got {period_length!r}")
 
@@ -158,31 +148,24 @@ def events_to_epochs(events: list[Event], period_length: float) -> Epochs:
     first_onset = events_sorted[0].onset
 
     # Validate fixed duration + contiguity.
-    atol = 1e-9
     for i, event in enumerate(events_sorted):
         expected_onset = first_onset + i * step
-        if not np.isclose(event.duration, step, rtol=0.0, atol=atol):
+        if event.duration != step:
             raise ValueError(
                 f"event duration must equal period_length={step}, got {event.duration}"
             )
-        if not np.isclose(event.onset, expected_onset, rtol=0.0, atol=atol):
+        if event.onset != expected_onset:
             raise ValueError(
                 "events are not contiguous fixed-period epochs when sorted by onset"
             )
 
-    # Infer dtype: if all labels are int-like, return int epochs; else object.
-    parsed_ints: list[int] = []
-    all_ints = True
-    for event in events_sorted:
-        parsed = _parse_int_label(event.description)
-        if parsed is None:
-            all_ints = False
-            break
-        parsed_ints.append(parsed)
+    if any(e.label is None for e in events_sorted):
+        raise ValueError("all events must have a non-None label to build Epochs")
 
-    if all_ints:
-        labels = np.asarray(parsed_ints, dtype=np.int64)
+    labels_list = [e.label for e in events_sorted]
+    if all(isinstance(x, (int, np.integer)) for x in labels_list):
+        labels = np.asarray([int(x) for x in labels_list], dtype=np.int64)
     else:
-        labels = np.asarray([e.description for e in events_sorted], dtype=object)
+        labels = np.asarray([str(x) for x in labels_list], dtype=object)
 
     return Epochs(labels=labels, period_length=step, onset=first_onset)
