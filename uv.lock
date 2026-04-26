@@ -1841,6 +1841,9 @@ edf = [
 hdf5 = [
     { name = "h5py" },
 ]
+mne = [
+    { name = "mne" },
+]
 nsrr = [
     { name = "python-dotenv" },
     { name = "requests" },
@@ -1850,6 +1853,10 @@ nsrr = [
 schemas = [
     { name = "pydantic" },
     { name = "pyyaml" },
+]
+signal = [
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
 [package.dev-dependencies]
@@ -1887,16 +1894,18 @@ requires-dist = [
     { name = "h5py", marker = "extra == 'hdf5'", specifier = ">=3.8" },
     { name = "loguru", marker = "extra == 'cli'", specifier = ">=0.7.3" },
     { name = "mne", marker = "extra == 'edf'", specifier = ">=1.5" },
+    { name = "mne", marker = "extra == 'mne'", specifier = ">=1.5" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "pydantic", marker = "extra == 'schemas'", specifier = ">=2.12.5" },
     { name = "python-dotenv", marker = "extra == 'nsrr'", specifier = ">=1.0.0" },
     { name = "pyyaml", marker = "extra == 'schemas'", specifier = ">=6.0.3" },
     { name = "requests", marker = "extra == 'nsrr'", specifier = ">=2.31.0" },
+    { name = "scipy", marker = "extra == 'signal'", specifier = ">=1.11" },
     { name = "tqdm", marker = "extra == 'nsrr'", specifier = ">=4.67.3" },
     { name = "typer", marker = "extra == 'cli'", specifier = ">=0.21.1" },
     { name = "urllib3", marker = "extra == 'nsrr'", specifier = ">=2.2.5" },
 ]
-provides-extras = ["cli", "nsrr", "schemas", "edf", "hdf5"]
+provides-extras = ["cli", "signal", "mne", "nsrr", "schemas", "edf", "hdf5"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -126,7 +126,7 @@ def write(
         g.create_dataset("data", data=data.values, compression="gzip", shuffle=True)
         g.create_dataset("timestamp", data=data.timestamps, compression="gzip")
         g.attrs["channel_names"] = _str_array_attrs(data.channel_names)
-        g.attrs["units"] = _str_array_attrs(data.units)
+        g.attrs["units"] = _str_array_attrs(tuple(u.symbol for u in data.units))
         if data.sample_rate is not None:
             g.attrs["sample_rate"] = float(data.sample_rate)
 
@@ -145,7 +145,7 @@ def serialize(ts: TimeSeries) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
     datasets = {"data": ts.values, "timestamp": ts.timestamps}
     attrs: dict[str, Any] = {
         "channel_names": ts.channel_names,
-        "units": ts.units,
+        "units": tuple(u.symbol for u in ts.units),
     }
     if ts.sample_rate is not None:
         attrs["sample_rate"] = float(ts.sample_rate)

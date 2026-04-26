@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from somnio.data import Sample, TimeSeries, collect_samples, concat
+from somnio.data.units import V
 
 
 def make_ts(
@@ -186,7 +187,7 @@ class TestTimeSeries:
         ts = make_ts()
         sub = ts.select_channels(["EEG_R"])
         assert sub.channel_names == ("EEG_R",)
-        assert sub.units == ("V",)
+        assert sub.units == (V,)
         assert sub.n_channels == 1
         assert sub.n_samples == ts.n_samples
 

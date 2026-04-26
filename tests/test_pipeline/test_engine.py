@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pytest
 
-from somnio.data import TimeSeries
+from somnio.data import Event, TimeSeries
 from somnio.pipeline import (
     DeadEndError,
     OutputConflictError,
@@ -278,3 +278,55 @@ def test_parallel_processes_smoke_with_import_string_transform() -> None:
     )
     assert "y" in out
     np.testing.assert_allclose(out["y"].values, 3.0)
+
+
+def emit_events(bundle: dict[str, TimeSeries], *, key: str) -> dict[str, list[Event]]:
+    ts = bundle[key]
+    # One event at start-of-recording (nanosecond timebase).
+    return {
+        "events": [
+            Event(
+                onset=0,
+                duration=0,
+                type="test",
+                label="test",
+                extras={"n": int(ts.values.shape[0])},
+            )
+        ]
+    }
+
+
+def test_step_can_return_event_list() -> None:
+    p = Pipeline.from_steps(
+        [
+            Step(
+                name="emit_events",
+                inputs=("x",),
+                outputs=("events",),
+                transforms=(TransformSpec(__name__ + ":emit_events", {"key": "x"}),),
+            )
+        ]
+    )
+    out = execute(p, {"x": _make_ts(1.0)}, parallel=False)
+    assert "events" in out
+    assert isinstance(out["events"], list)
+    assert isinstance(out["events"][0], Event)
+    assert out["events"][0].type == "test"
+    assert out["events"][0].label == "test"
+
+
+def test_step_can_return_event_list_parallel_threads() -> None:
+    p = Pipeline.from_steps(
+        [
+            Step(
+                name="emit_events",
+                inputs=("x",),
+                outputs=("events",),
+                transforms=(TransformSpec(__name__ + ":emit_events", {"key": "x"}),),
+            )
+        ]
+    )
+    out = execute(
+        p, {"x": _make_ts(1.0)}, parallel=True, backend="threads", max_workers=1
+    )
+    assert isinstance(out["events"], list)
