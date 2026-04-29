@@ -13,7 +13,7 @@ import numpy as np
 
 from somnio.data.annotations import Event
 from somnio.data.timeseries import TimeSeries
-from somnio.transforms.signal import apply_fir_filter
+from somnio.transforms.filter import apply_fir_filter
 from somnio.data.units import UV, convert_values
 from somnio.utils.imports import MissingOptionalDependency
 from somnio.tasks.eye_movement.defaults import (

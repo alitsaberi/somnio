@@ -69,6 +69,9 @@ edf = [
     "mne>=1.5",
 ]
 hdf5 = ["h5py>=3.8"]
+onnx = [
+    "onnxruntime>=1.16",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]

@@ -16,5 +16,14 @@ except ModuleNotFoundError as e:
 
 
 def load_yaml(path: Path | str) -> Any:
-    text = Path(path).read_text(encoding="utf-8")
+    """Load YAML from a file path."""
+    path = Path(path)
+    suffix = path.suffix.lower()
+
+    if suffix not in (".yaml", ".yml"):
+        raise ValueError(
+            f"Unsupported extension {path.suffix!r} for {path}; expected .yaml or .yml"
+        )
+
+    text = path.read_text(encoding="utf-8")
     return yaml.safe_load(text)
