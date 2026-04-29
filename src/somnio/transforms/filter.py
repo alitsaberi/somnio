@@ -1,4 +1,4 @@
-"""Signal processing transforms for TimeSeries data.
+"""Signal filtering transforms for TimeSeries data.
 
 Requires the ``signal`` extra (SciPy)::
 
@@ -12,22 +12,16 @@ import logging
 import numpy as np
 
 from somnio.data.timeseries import TimeSeries
-from somnio.pipeline.types import Bundle
 from somnio.utils.imports import MissingOptionalDependency
 
 try:
     from scipy.signal import filtfilt, firwin
 except ModuleNotFoundError as exc:
     raise MissingOptionalDependency(
-        "scipy", extra="signal", purpose="Signal processing transforms"
+        "scipy", extra="signal", purpose="Signal filtering transforms"
     ) from exc
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
 
 
 def _fir_numtaps(sample_rate: float, n_samples: int) -> int:
@@ -100,11 +94,6 @@ def _design_fir_coeffs(
     return "lowpass", firwin(numtaps, high_cutoff / nyq, pass_zero=True)  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
-
 def apply_fir_filter(
     ts: TimeSeries,
     low_cutoff: float | None = None,
@@ -168,42 +157,3 @@ def apply_fir_filter(
         units=list(ts.units),
         sample_rate=ts.sample_rate,
     )
-
-
-# ---------------------------------------------------------------------------
-# Transform
-# ---------------------------------------------------------------------------
-
-
-def fir_filter(
-    bundle: Bundle,
-    /,
-    *,
-    low_cutoff: float | None = None,
-    high_cutoff: float | None = None,
-) -> Bundle:
-    """Bundle → Bundle transform that applies :func:`apply_fir_filter` to every TimeSeries.
-
-    Every value in the bundle must be a
-    :class:`~somnio.data.timeseries.TimeSeries`; mixed bundles containing
-    ``list[Event]`` or ``Epochs`` will raise a ``TypeError``.
-
-    Args:
-        bundle: Input bundle. All values must be TimeSeries instances.
-        low_cutoff: Lower cutoff frequency in Hz, or ``None``.
-        high_cutoff: Upper cutoff frequency in Hz, or ``None``.
-
-    Returns:
-        New bundle where every TimeSeries has been filtered.
-
-    Raises:
-        TypeError: If any bundle value is not a TimeSeries.
-    """
-    result: Bundle = {}
-    for key, value in bundle.items():
-        if not isinstance(value, TimeSeries):
-            raise TypeError(
-                f"Bundle key {key!r} is {type(value).__name__!r}, expected TimeSeries."
-            )
-        result[key] = apply_fir_filter(value, low_cutoff, high_cutoff)
-    return result
