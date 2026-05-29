@@ -69,6 +69,11 @@ class ModelMetadata(BaseModel):
         ge=1,
         description="ONNX input: size of channel axis C (last axis in NPTC).",
     )
+    n_samples_per_prediction: int | None = Field(
+        default=None,
+        ge=1,
+        description="ONNX output: number of samples per prediction (default: same as n_samples_per_period).",
+    )
     class_labels: list[str] = Field(
         ...,
         min_length=1,
