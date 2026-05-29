@@ -6,7 +6,7 @@ from __future__ import annotations
 from somnio.utils.imports import MissingOptionalDependency
 
 try:
-    from pydantic import BaseModel, ConfigDict, Field, field_validator
+    from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 except ModuleNotFoundError as e:
     if e.name != "pydantic":
         raise
@@ -41,6 +41,7 @@ class ModelMetadata(BaseModel):
         sample_rate_hz: 128
         n_periods_per_window: 35
         n_samples_per_period: 3840
+        n_samples_per_prediction: 128
         n_channels: 1
         class_labels: [W, N1, N2, N3, REM]
         preprocessing: []
@@ -69,6 +70,15 @@ class ModelMetadata(BaseModel):
         ge=1,
         description="ONNX input: size of channel axis C (last axis in NPTC).",
     )
+    n_samples_per_prediction: int = Field(
+        ...,
+        ge=1,
+        description=(
+            "Input samples aggregated into one prediction within a period. "
+            "ONNX output time axis length is "
+            "``n_samples_per_period // n_samples_per_prediction``."
+        ),
+    )
     class_labels: list[str] = Field(
         ...,
         min_length=1,
@@ -81,9 +91,25 @@ class ModelMetadata(BaseModel):
 
     onnx: OnnxBindings = Field(default_factory=OnnxBindings)
 
+    @property
+    def n_predictions_per_period(self) -> int:
+        """Predictions along the ONNX output time axis for one input period."""
+        return self.n_samples_per_period // self.n_samples_per_prediction
+
     def preprocessing_transform_specs(self) -> tuple[TransformSpec, ...]:
         """Runtime `TransformSpec` tuple for `preprocessing` (import-string targets)."""
         return tuple(step.to_runtime() for step in self.preprocessing)
+
+    @model_validator(mode="after")
+    def _period_divisible_by_prediction_stride(self) -> ModelMetadata:
+        n_sp = self.n_samples_per_period
+        stride = self.n_samples_per_prediction
+        if n_sp % stride != 0:
+            raise ValueError(
+                f"n_samples_per_period ({n_sp}) must be divisible by "
+                f"n_samples_per_prediction ({stride})"
+            )
+        return self
 
     @field_validator("class_labels")
     @classmethod

@@ -127,7 +127,7 @@ def _verify_nptc_input(
 def _verify_output_logits_dim(
     session: InferenceSession, metadata: ModelMetadata, output_name: str
 ) -> None:
-    """Ensure the output logits dimension matches the number of class labels."""
+    """Ensure output class and prediction-time dims match metadata."""
     out = next(o for o in session.get_outputs() if o.name == output_name)
     shape = out.shape
 
@@ -137,6 +137,23 @@ def _verify_output_logits_dim(
         raise ValueError(
             f"Output last dim {k} for {output_name!r} != len(class_labels) {n}"
         )
+
+    if len(shape) >= 2:
+        t_pred = _onnx_dim_as_int(shape[-2])
+        expected_t = metadata.n_predictions_per_period
+        if t_pred is not None and t_pred != expected_t:
+            raise ValueError(
+                f"Output prediction-count dim {t_pred} for {output_name!r} != "
+                f"n_samples_per_period // n_samples_per_prediction ({expected_t})"
+            )
+
+    if len(shape) >= 3:
+        p = _onnx_dim_as_int(shape[-3])
+        if p is not None and p != metadata.n_periods_per_window:
+            raise ValueError(
+                f"Output periods dim {p} for {output_name!r} != "
+                f"metadata n_periods_per_window {metadata.n_periods_per_window}"
+            )
 
 
 class OnnxSleepScoringModel:
@@ -206,7 +223,12 @@ class OnnxSleepScoringModel:
         return self._output_name
 
     def predict(self, batch: np.ndarray) -> np.ndarray:
-        """Forward pass: ``batch`` float32 ``(batch, n_periods_per_window, n_samples_per_period, n_channels)`` → probs ``(batch, n_windows, 1, n_classes)``."""
+        """Forward pass: NPTC batch in, class probabilities out.
+
+        Input shape: ``(n_batch, n_periods_per_window, n_samples_per_period, n_channels)``.
+        Output shape: ``(n_batch, n_periods_per_window, n_predictions_per_period, n_classes)``
+        with ``n_predictions_per_period = n_samples_per_period // n_samples_per_prediction``.
+        """
         x = np.asarray(batch, dtype=np.float32, order="C")
         if x.ndim != 4:
             raise ValueError(f"Expected 4D NPTC batch, got shape {x.shape}")

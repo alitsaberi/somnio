@@ -119,6 +119,7 @@ def test_build_from_metadata():
         sample_rate_hz=128.0,
         n_periods_per_window=2,
         n_samples_per_period=4,
+        n_samples_per_prediction=4,
         n_channels=1,
         class_labels=["W", "N1", "N2", "N3", "REM"],
     )
