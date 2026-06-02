@@ -1,6 +1,6 @@
 [project]
 name = "somnio"
-version = "0.1.0"
+version = "0.2.0b1"
 description = "Python library and CLI for sleep and physiological data workflows."
 readme = "README.md"
 authors = [
@@ -19,7 +19,7 @@ keywords = [
     "zmax"
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
