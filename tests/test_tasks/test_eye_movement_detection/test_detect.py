@@ -1,4 +1,4 @@
-"""Tests for somnio.tasks.eye_movement.detect.
+"""Tests for somnio.tasks.eye_movement_detection.detect.
 
 Requires the ``signal`` extra (SciPy).  All tests are skipped when SciPy is
 not installed so the default test suite stays light.
@@ -14,7 +14,7 @@ pytest.importorskip("scipy")
 
 from somnio.data.annotations import Event
 from somnio.data.timeseries import TimeSeries
-from somnio.tasks.eye_movement.defaults import (
+from somnio.tasks.eye_movement_detection.defaults import (
     MAX_EVENT_DURATION_S,
     MAX_EVENT_SKEWNESS,
     MAX_PEAK_AMPLITUDE_UV,
@@ -25,8 +25,15 @@ from somnio.tasks.eye_movement.defaults import (
     RELATIVE_BASELINE,
     RELATIVE_PEAK_PROMINENCE,
 )
-from somnio.tasks.eye_movement.detect import _detect_events, detect_lr_eye_movements
-from somnio.tasks.eye_movement.event import EVENT_TYPE, LEFT_LABEL, RIGHT_LABEL
+from somnio.tasks.eye_movement_detection.detect import (
+    _detect_events,
+    detect_lr_eye_movements,
+)
+from somnio.tasks.eye_movement_detection.event import (
+    EVENT_TYPE,
+    LEFT_LABEL,
+    RIGHT_LABEL,
+)
 
 # ---------------------------------------------------------------------------
 # Shared helpers

@@ -1,4 +1,4 @@
-"""Tests for somnio.tasks.eye_movement.event.
+"""Tests for somnio.tasks.eye_movement_detection.event.
 
 Covers direction labeling, event validation, temporal merging, and pattern
 filtering.  No SciPy dependency is required.
@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from somnio.data.annotations import Event
-from somnio.tasks.eye_movement.event import (
+from somnio.tasks.eye_movement_detection.event import (
     EVENT_TYPE,
     LEFT_LABEL,
     RIGHT_LABEL,

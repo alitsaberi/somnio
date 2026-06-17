@@ -1,6 +1,6 @@
 """Eye-movement detection task."""
 
-from somnio.tasks.eye_movement.event import (
+from somnio.tasks.eye_movement_detection.event import (
     EVENT_TYPE,
     LEFT_LABEL,
     RIGHT_LABEL,
@@ -8,7 +8,7 @@ from somnio.tasks.eye_movement.event import (
     filter_by_pattern,
     merge_events,
 )
-from somnio.tasks.eye_movement.detect import detect_lr_eye_movements
+from somnio.tasks.eye_movement_detection.detect import detect_lr_eye_movements
 
 __all__ = [
     "EVENT_TYPE",

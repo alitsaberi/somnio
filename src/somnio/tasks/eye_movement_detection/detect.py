@@ -16,7 +16,7 @@ from somnio.data.timeseries import TimeSeries
 from somnio.transforms.filter import apply_fir_filter
 from somnio.data.units import UV, convert_values
 from somnio.utils.imports import MissingOptionalDependency
-from somnio.tasks.eye_movement.defaults import (
+from somnio.tasks.eye_movement_detection.defaults import (
     HIGH_CUTOFF_HZ,
     LOW_CUTOFF_HZ,
     MAX_AMPLITUDE_RATIO,
@@ -33,7 +33,7 @@ from somnio.tasks.eye_movement.defaults import (
     RELATIVE_BASELINE,
     RELATIVE_PEAK_PROMINENCE,
 )
-from somnio.tasks.eye_movement.event import (
+from somnio.tasks.eye_movement_detection.event import (
     EVENT_TYPE,
     LEFT_LABEL,
     RIGHT_LABEL,
@@ -306,7 +306,7 @@ def detect_lr_eye_movements(
     2. Detect primitive L/R events via peak detection on the negative-product
        signal (see :func:`detect_primitive_events`).
     3. Merge temporally close primitives into sequences
-       (see :func:`~somnio.tasks.eye_movement.sequences.build_sequences`).
+       (see :func:`~somnio.tasks.eye_movement_detection.sequences.build_sequences`).
     4. Discard sequences whose label does not match *accepted_pattern*.
     5. Discard sequences with insufficient anti-correlation or an outlying
        amplitude ratio between the left and right channels.
