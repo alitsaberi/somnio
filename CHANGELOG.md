@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+### Changed
+
+- **`somnio.tasks.eye_movement`** renamed to **`somnio.tasks.eye_movement_detection`**.
+
 ## [0.2.0b1] - 2026-06-02
 
 Beta pre-release after 0.1.0. New pipeline, transforms, and task modules; annotation time bases and extras layout changed. Documentation and test coverage for sleep scoring are still incomplete.
