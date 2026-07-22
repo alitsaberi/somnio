@@ -127,18 +127,23 @@ def _verify_nptc_input(
 def _verify_output_logits_dim(
     session: InferenceSession, metadata: ModelMetadata, output_name: str
 ) -> None:
-    """Ensure output class and prediction-time dims match metadata."""
+    """Ensure output class and prediction-time dims match metadata.
+
+    Supported ranks:
+    - 4D ``(batch, period, pred, classes)``
+    - 3D ``(batch, period, classes)`` — one prediction per period
+    """
     out = next(o for o in session.get_outputs() if o.name == output_name)
     shape = out.shape
 
     k = _onnx_dim_as_int(shape[-1])
     n = len(metadata.class_labels)
-    if k != n:
+    if k is not None and k != n:
         raise ValueError(
             f"Output last dim {k} for {output_name!r} != len(class_labels) {n}"
         )
 
-    if len(shape) >= 2:
+    if len(shape) == 4:
         t_pred = _onnx_dim_as_int(shape[-2])
         expected_t = metadata.n_predictions_per_period
         if t_pred is not None and t_pred != expected_t:
@@ -146,14 +151,33 @@ def _verify_output_logits_dim(
                 f"Output prediction-count dim {t_pred} for {output_name!r} != "
                 f"n_samples_per_period // n_samples_per_prediction ({expected_t})"
             )
-
-    if len(shape) >= 3:
         p = _onnx_dim_as_int(shape[-3])
         if p is not None and p != metadata.n_periods_per_window:
             raise ValueError(
                 f"Output periods dim {p} for {output_name!r} != "
                 f"metadata n_periods_per_window {metadata.n_periods_per_window}"
             )
+        return
+
+    if len(shape) == 3:
+        p = _onnx_dim_as_int(shape[-2])
+        if p is not None and p != metadata.n_periods_per_window:
+            raise ValueError(
+                f"Output periods dim {p} for {output_name!r} != "
+                f"metadata n_periods_per_window {metadata.n_periods_per_window}"
+            )
+        expected_t = metadata.n_predictions_per_period
+        if expected_t != 1:
+            raise ValueError(
+                f"Output rank 3 (B,P,K) for {output_name!r} implies one prediction "
+                f"per period, but metadata n_predictions_per_period is {expected_t}"
+            )
+        return
+
+    raise ValueError(
+        f"Expected 3D (B,P,K) or 4D (B,P,T_pred,K) output for {output_name!r}, "
+        f"got rank {len(shape)} shape={shape!r}"
+    )
 
 
 class OnnxSleepScoringModel:
@@ -227,7 +251,8 @@ class OnnxSleepScoringModel:
 
         Input shape: ``(n_batch, n_periods_per_window, n_samples_per_period, n_channels)``.
         Output shape: ``(n_batch, n_periods_per_window, n_predictions_per_period, n_classes)``
-        with ``n_predictions_per_period = n_samples_per_period // n_samples_per_prediction``.
+        with ``n_predictions_per_period = n_samples_per_period // n_samples_per_prediction``,
+        or ``(n_batch, n_periods_per_window, n_classes)`` when there is one prediction per period.
         """
         x = np.asarray(batch, dtype=np.float32, order="C")
         if x.ndim != 4:
