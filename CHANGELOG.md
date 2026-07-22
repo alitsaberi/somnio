@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 - **`somnio.tasks.eye_movement`** renamed to **`somnio.tasks.eye_movement_detection`**.
 
+### Added
+
+- **`somnio.tasks.eeg_usability`**: EEG usability scoring from EEG and movement data (optional extra `eeg-usability`: `requests`, `scipy`, `tsfel`, `joblib`, `platformdirs`).
+
 ## [0.2.0b1] - 2026-06-02
 
 Beta pre-release after 0.1.0. New pipeline, transforms, and task modules; annotation time bases and extras layout changed. Documentation and test coverage for sleep scoring are still incomplete.

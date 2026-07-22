@@ -65,6 +65,7 @@ nav:
     - CLI: user-guide/cli.md
     - Download NSRR: user-guide/download-nsrr.md
     - Data Types: user-guide/data.md
+    - EEG Usability: user-guide/eeg-usability.md
   - Reference:
     - CLI: reference/cli.md
     - Data: reference/data.md

@@ -33,6 +33,7 @@ Somnio ships small optional extras so you can install only what you use:
 - `mne`: MNE-based processing utilities
 - `edf`: EDF I/O (`edfio`, plus `mne`)
 - `hdf5`: HDF5 layouts (`h5py`)
+- `eeg-usability`: EEG usability scoring from eegFloss models (`requests`, `scipy`, `tsfel`, `joblib`, `platformdirs`); see [EEG usability](user-guide/eeg-usability.md)
 
 ### With pip
 
