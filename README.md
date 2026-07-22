@@ -14,7 +14,7 @@ Optional extras (install as `somnio[extra]` or `somnio[a,b]`):
 - `somnio[nsrr]` — NSRR download helpers (pair with `cli` for the `download-nsrr` command)
 - `somnio[schemas]` — YAML schemas (`pydantic`, `pyyaml`)
 - `somnio[signal]` — SciPy-based signal processing utilities
-- `somnio[eeg-usability]` — EEG usability scoring (`somnio.tasks.eeg_usability`; `requests`, `scipy`, `tsfel`, `joblib`, `platformdirs`)
+- `somnio[eeg-usability]` — EEG usability scoring (`somnio.tasks.eeg_usability`; `requests`, `scipy`, `platformdirs`, `lightgbm`)
 - `somnio[mne]` — MNE-based processing utilities
 - `somnio[edf]` — EDF I/O (`edfio`, plus `mne`)
 - `somnio[hdf5]` — `somnio.io.hdf5` layouts (requires [h5py](https://www.h5py.org/))

@@ -1,10 +1,11 @@
 """EEG usability feature extraction, model loading, and scoring.
 
-This module implements the eegUsability pipeline from `eegFloss
+This module implements the eegUsability *lite* pipeline from `eegFloss
 <https://github.com/Niloy333/eegFloss>`_ and loads pre-trained models
-distributed with that project. If you use this functionality in research,
-please cite Sikder et al. (2025), https://doi.org/10.48550/arXiv.2507.06433,
-and the eegFloss software release, https://doi.org/10.5281/zenodo.15823969.
+distributed with that project. Lite models use spectrogram features only
+(no TSFEL). If you use this functionality in research, please cite Sikder
+et al. (2025), https://doi.org/10.48550/arXiv.2507.06433, and the eegFloss
+software release, https://doi.org/10.5281/zenodo.15823969.
 See also https://alitsaberi.github.io/somnio/user-guide/eeg-usability/.
 
 Requires the ``eeg-usability`` extra::
@@ -18,7 +19,6 @@ import logging
 import pickle
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -45,20 +45,6 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 try:
-    import tsfel
-except ModuleNotFoundError as exc:
-    raise MissingOptionalDependency(
-        "tsfel", extra="eeg-usability", purpose="EEG usability feature extraction"
-    ) from exc
-
-try:
-    from joblib import Parallel, delayed
-except ModuleNotFoundError as exc:
-    raise MissingOptionalDependency(
-        "joblib", extra="eeg-usability", purpose="EEG usability feature extraction"
-    ) from exc
-
-try:
     from scipy.signal import spectrogram
 except ModuleNotFoundError as exc:
     raise MissingOptionalDependency(
@@ -66,10 +52,6 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 logger = logging.getLogger(__name__)
-
-_CGF_STATISTICAL: dict[str, Any] | None = None
-_CGF_TEMPORAL: dict[str, Any] | None = None
-_CGF_SPECTRAL: dict[str, Any] | None = None
 
 
 def _get_available_models() -> dict[str, str]:
@@ -150,6 +132,17 @@ def _read_model_pickle(model_path: Path) -> object:
     return payload["model"]
 
 
+def _require_lite_model(model: object) -> None:
+    num_features = model.num_feature()  # type: ignore[attr-defined]
+    if num_features != N_FEATURES_LITE:
+        raise ValueError(
+            "Only lite eegUsability models are supported "
+            f"(expected {N_FEATURES_LITE} spectrogram features, "
+            f"got {num_features}). Use load_model('lite') or "
+            "load_model('lite_binary')."
+        )
+
+
 def _extract_spectrogram_features(data: np.ndarray, sample_rate: float) -> np.ndarray:
     num_epochs, num_channels, _ = data.shape
 
@@ -162,56 +155,6 @@ def _extract_spectrogram_features(data: np.ndarray, sample_rate: float) -> np.nd
     logger.debug("Spectrogram features shape: %s", spectrogram_features.shape)
 
     return spectrogram_features.astype(np.float32)
-
-
-def _get_tsfel_configs() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    global _CGF_STATISTICAL, _CGF_TEMPORAL, _CGF_SPECTRAL
-    if _CGF_STATISTICAL is None:
-        _CGF_STATISTICAL = tsfel.get_features_by_domain("statistical")
-        _CGF_TEMPORAL = tsfel.get_features_by_domain("temporal")
-        _CGF_SPECTRAL = tsfel.get_features_by_domain("spectral")
-    return _CGF_STATISTICAL, _CGF_TEMPORAL, _CGF_SPECTRAL
-
-
-def _extract_tsfel_features_per_channel(
-    data: np.ndarray, sample_rate: float
-) -> np.ndarray:
-    cgf_statistical, cgf_temporal, cgf_spectral = _get_tsfel_configs()
-
-    all_features: dict[str, Any] = {}
-    all_features.update(
-        tsfel.time_series_features_extractor(
-            cgf_statistical, data, fs=sample_rate, verbose=0
-        )
-    )
-    all_features.update(
-        tsfel.time_series_features_extractor(
-            cgf_temporal, data, fs=sample_rate, verbose=0
-        )
-    )
-    all_features.update(
-        tsfel.time_series_features_extractor(
-            cgf_spectral, data, fs=sample_rate, verbose=0
-        )
-    )
-
-    return np.array(list(all_features.values()), dtype=np.float32).T
-
-
-def _extract_tsfel_features(data: np.ndarray, sample_rate: float) -> np.ndarray:
-    num_epochs, num_channels, _ = data.shape
-
-    reshaped_data = data.reshape(-1, data.shape[-1])
-
-    results = Parallel(n_jobs=-1, prefer="threads")(
-        delayed(_extract_tsfel_features_per_channel)(epoch_channel_data, sample_rate)
-        for epoch_channel_data in reshaped_data
-    )
-
-    tsfel_features = np.array(results).reshape(num_epochs, num_channels, -1)
-    logger.debug("TSFEL features shape: %s", tsfel_features.shape)
-
-    return tsfel_features
 
 
 def _create_lite_sample(
@@ -227,49 +170,6 @@ def _create_lite_sample(
         spectrogram_features.shape[0], -1
     )
     return np.concatenate([eeg, movement], axis=1)
-
-
-def _create_sample(
-    spectrogram_features: np.ndarray,
-    statistical_features: np.ndarray,
-    *,
-    eeg_idx: int,
-    movement_idx: int,
-) -> np.ndarray:
-    spec_feats = spectrogram_features[:, [eeg_idx, movement_idx], :, :]
-    spec_feats = np.hstack((spec_feats[:, 0, :, :], spec_feats[:, 1, :, :]))
-    spec_feats = np.hstack([spec_feats[:, i, :] for i in range(spec_feats.shape[1])])
-
-    stat_feats = statistical_features[:, [eeg_idx, movement_idx], :]
-    stat_feats = np.hstack((stat_feats[:, 0, :], stat_feats[:, 1, :]))
-
-    return np.hstack((spec_feats, stat_feats))
-
-
-def _build_model_samples(
-    spectrogram_features: np.ndarray,
-    model: object,
-    *,
-    eeg_idx: int,
-    movement_idx: int,
-    tsfel_features: np.ndarray | None = None,
-) -> np.ndarray:
-    num_features = model.num_feature()  # type: ignore[attr-defined]
-    if num_features == N_FEATURES_LITE:
-        logger.info("Using lite set of features: %s", num_features)
-        return _create_lite_sample(
-            spectrogram_features, eeg_idx=eeg_idx, movement_idx=movement_idx
-        )
-
-    logger.info("Using full set of features: %s", num_features)
-    if tsfel_features is None:
-        raise ValueError("TSFEL features are required for the full usability model.")
-    return _create_sample(
-        spectrogram_features,
-        tsfel_features,
-        eeg_idx=eeg_idx,
-        movement_idx=movement_idx,
-    )
 
 
 def _predict_usability_labels(model: object, samples: np.ndarray) -> np.ndarray:
@@ -348,11 +248,12 @@ def _prepare_epoch_array(
     return selected, samples_to_keep, epoch_length, array
 
 
-def load_model(version: str = "default") -> object:
-    """Load a pre-trained EEG usability model, downloading it on first use.
+def load_model(version: str = "lite") -> object:
+    """Load a pre-trained lite EEG usability model, downloading it on first use.
 
     Args:
-        version: Model version key in :data:`~somnio.tasks.eeg_usability.defaults.MODEL_NAMES`.
+        version: Model version key in :data:`~somnio.tasks.eeg_usability.defaults.MODEL_NAMES`
+            (``"lite"`` or ``"lite_binary"``).
 
     Returns:
         Fitted classifier with a ``predict`` method and ``num_feature()`` accessor.
@@ -383,7 +284,7 @@ def load_model(version: str = "default") -> object:
 
     logger.info("Loading model %s from %s", model_name, model_path)
     try:
-        return _read_model_pickle(model_path)
+        model = _read_model_pickle(model_path)
     except (OSError, pickle.UnpicklingError) as exc:
         logger.warning(
             "Failed to load EEG usability model pickle at %s (%s); "
@@ -394,12 +295,15 @@ def load_model(version: str = "default") -> object:
         model_path.unlink(missing_ok=True)
         _download_model(model_name)
         try:
-            return _read_model_pickle(model_path)
+            model = _read_model_pickle(model_path)
         except (OSError, pickle.UnpicklingError) as retry_exc:
             raise RuntimeError(
                 f"Failed to load EEG usability model pickle at {model_path!r}: "
                 f"{retry_exc}"
             ) from retry_exc
+
+    _require_lite_model(model)
+    return model
 
 
 def get_usability_score(
@@ -416,7 +320,7 @@ def get_usability_score(
         ts: Input time-series at 256 Hz containing one EEG channel and a
             movement channel. The EEG channel is converted to microvolts (µV)
             internally before feature extraction.
-        model: Classifier returned by :func:`load_model`.
+        model: Lite classifier returned by :func:`load_model`.
         eeg: Channel name for the EEG electrode.
         movement: Channel name for the movement signal.
         output_channel: Name of the returned score channel.
@@ -432,9 +336,12 @@ def get_usability_score(
 
     Raises:
         ValueError: If ``ts.sample_rate`` is not 256 Hz, required channels are
-            missing, or the recording is shorter than one epoch.
+            missing, the recording is shorter than one epoch, or *model* is not
+            a lite model.
         MissingOptionalDependency: If optional packages are not installed.
     """
+    _require_lite_model(model)
+
     channels = [eeg, movement]
     selected, samples_to_keep, epoch_length, array = _prepare_epoch_array(
         ts,
@@ -444,17 +351,7 @@ def get_usability_score(
 
     sample_rate = selected.sample_rate  # type: ignore[assignment]
     spectrogram_features = _extract_spectrogram_features(array, sample_rate)
-    tsfel_features = None
-    if model.num_feature() != N_FEATURES_LITE:  # type: ignore[attr-defined]
-        tsfel_features = _extract_tsfel_features(array, sample_rate)
-
-    samples = _build_model_samples(
-        spectrogram_features,
-        model,
-        eeg_idx=0,
-        movement_idx=1,
-        tsfel_features=tsfel_features,
-    )
+    samples = _create_lite_sample(spectrogram_features, eeg_idx=0, movement_idx=1)
     logger.debug("Samples shape: %s", samples.shape)
 
     labels = _predict_usability_labels(model, samples)
@@ -486,7 +383,7 @@ def get_usability_scores(
         ts: Input time-series at 256 Hz containing left EEG, right EEG, and
             movement channels. EEG channels are converted to microvolts (µV)
             internally before feature extraction.
-        model: Classifier returned by :func:`load_model`.
+        model: Lite classifier returned by :func:`load_model`.
         eeg_left: Channel name for the left EEG electrode.
         eeg_right: Channel name for the right EEG electrode.
         movement: Channel name for the movement signal.
@@ -503,9 +400,12 @@ def get_usability_scores(
 
     Raises:
         ValueError: If ``ts.sample_rate`` is not 256 Hz, required channels are
-            missing, or the recording is shorter than one epoch.
+            missing, the recording is shorter than one epoch, or *model* is not
+            a lite model.
         MissingOptionalDependency: If optional packages are not installed.
     """
+    _require_lite_model(model)
+
     channels = [eeg_left, eeg_right, movement]
     selected, samples_to_keep, epoch_length, array = _prepare_epoch_array(
         ts,
@@ -515,24 +415,12 @@ def get_usability_scores(
 
     sample_rate = selected.sample_rate  # type: ignore[assignment]
     spectrogram_features = _extract_spectrogram_features(array, sample_rate)
-    tsfel_features = None
-    if model.num_feature() != N_FEATURES_LITE:  # type: ignore[attr-defined]
-        tsfel_features = _extract_tsfel_features(array, sample_rate)
-
     movement_idx = channels.index(movement)
-    samples_left = _build_model_samples(
-        spectrogram_features,
-        model,
-        eeg_idx=0,
-        movement_idx=movement_idx,
-        tsfel_features=tsfel_features,
+    samples_left = _create_lite_sample(
+        spectrogram_features, eeg_idx=0, movement_idx=movement_idx
     )
-    samples_right = _build_model_samples(
-        spectrogram_features,
-        model,
-        eeg_idx=1,
-        movement_idx=movement_idx,
-        tsfel_features=tsfel_features,
+    samples_right = _create_lite_sample(
+        spectrogram_features, eeg_idx=1, movement_idx=movement_idx
     )
     logger.debug("Samples left shape: %s", samples_left.shape)
     logger.debug("Samples right shape: %s", samples_right.shape)
