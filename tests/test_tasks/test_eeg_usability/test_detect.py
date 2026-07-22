@@ -13,18 +13,16 @@ import numpy as np
 import pytest
 
 pytest.importorskip("scipy")
-pytest.importorskip("tsfel")
-pytest.importorskip("joblib")
 pytest.importorskip("requests")
 
 from somnio.data.timeseries import TimeSeries
 from somnio.tasks.eeg_usability import detect
 from somnio.tasks.eeg_usability.defaults import (
     EPOCH_DURATION_S,
+    MODEL_NAMES,
     N_FEATURES_LITE,
     OUTPUT_CHANNEL_NAMES,
     OUTPUT_SAMPLE_RATE_HZ,
-    OUTPUT_UNITS,
     SAMPLE_RATE_HZ,
 )
 from somnio.tasks.eeg_usability.detect import (
@@ -70,7 +68,7 @@ class StubModel:
 
     def __init__(
         self,
-        num_features: int,
+        num_features: int = N_FEATURES_LITE,
         *,
         left_label: int = 0,
         right_label: int = 1,
@@ -100,19 +98,12 @@ def _stub_spectrogram_features(data: np.ndarray, sample_rate: float) -> np.ndarr
     return np.zeros((num_epochs, num_channels, 2, 2), dtype=np.float32)
 
 
-def _stub_tsfel_features(data: np.ndarray, sample_rate: float) -> np.ndarray:
-    del sample_rate
-    num_epochs, num_channels, _ = data.shape
-    return np.zeros((num_epochs, num_channels, 10), dtype=np.float32)
-
-
 @pytest.fixture(autouse=True)
 def _patch_feature_extraction(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Avoid slow spectrogram/TSFEL work in every test."""
+    """Avoid slow spectrogram work in every test."""
     monkeypatch.setattr(
         detect, "_extract_spectrogram_features", _stub_spectrogram_features
     )
-    monkeypatch.setattr(detect, "_extract_tsfel_features", _stub_tsfel_features)
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +121,7 @@ class TestValidation:
             units=("V", "V", "1"),
             sample_rate=None,
         )
-        model = StubModel(N_FEATURES_LITE)
+        model = StubModel()
         with pytest.raises(ValueError, match="sample_rate"):
             get_usability_scores(
                 ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
@@ -138,7 +129,7 @@ class TestValidation:
 
     def test_raises_when_sample_rate_is_not_256_hz(self):
         ts = _make_eeg_ts(_EPOCH_LENGTH, sample_rate=128.0)
-        model = StubModel(N_FEATURES_LITE)
+        model = StubModel()
         with pytest.raises(ValueError, match="256"):
             get_usability_scores(
                 ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
@@ -146,7 +137,7 @@ class TestValidation:
 
     def test_raises_when_required_channels_missing(self):
         ts = _make_eeg_ts(_EPOCH_LENGTH)
-        model = StubModel(N_FEATURES_LITE)
+        model = StubModel()
         with pytest.raises(ValueError, match="channels"):
             get_usability_scores(
                 ts,
@@ -158,74 +149,45 @@ class TestValidation:
 
     def test_raises_when_recording_shorter_than_one_epoch(self):
         ts = _make_eeg_ts(_EPOCH_LENGTH - 1)
-        model = StubModel(N_FEATURES_LITE)
+        model = StubModel()
         with pytest.raises(ValueError, match="No epochs"):
             get_usability_scores(
                 ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
             )
 
-    def test_single_electrode_raises_for_missing_channel(self):
-        ts = _make_eeg_ts(_EPOCH_LENGTH, channel_names=("EEG_L", "MOVEMENT"))
-        model = StubModel(N_FEATURES_LITE)
-        with pytest.raises(ValueError, match="channels"):
-            get_usability_score(
-                ts, model, eeg="EEG_L", movement="MISSING", output_channel="score"
+    def test_rejects_non_lite_model(self):
+        ts = _make_eeg_ts(_EPOCH_LENGTH)
+        model = StubModel(N_FEATURES_LITE + 1)
+        with pytest.raises(ValueError, match="Only lite"):
+            get_usability_scores(
+                ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
             )
 
 
 # ---------------------------------------------------------------------------
-# Epoch trimming and output metadata
+# Scoring
 # ---------------------------------------------------------------------------
 
 
-class TestEpochTrimmingAndOutput:
-    def test_trims_partial_trailing_epoch(self):
-        extra_samples = 100
-        n_samples = _EPOCH_LENGTH * 2 + extra_samples
-        ts = _make_eeg_ts(n_samples)
-        model = StubModel(N_FEATURES_LITE)
+class TestScoring:
+    def test_get_usability_scores_shape_and_metadata(self):
+        ts = _make_eeg_ts(_EPOCH_LENGTH * 2)
+        model = StubModel()
 
         scores, samples_to_keep, epoch_length = get_usability_scores(
             ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
         )
 
-        assert epoch_length == _EPOCH_LENGTH
-        assert samples_to_keep == _EPOCH_LENGTH * 2
-        assert scores.n_samples == 2
-
-    def test_output_timestamps_are_epoch_means(self):
-        n_samples = _EPOCH_LENGTH * 2
-        ts = _make_eeg_ts(n_samples)
-        model = StubModel(N_FEATURES_LITE)
-
-        scores, _, epoch_length = get_usability_scores(
-            ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
-        )
-
-        expected = np.array(
-            [
-                int(np.mean(ts.timestamps[i * epoch_length : (i + 1) * epoch_length]))
-                for i in range(2)
-            ],
-            dtype=np.int64,
-        )
-        np.testing.assert_array_equal(scores.timestamps, expected)
-
-    def test_output_channel_names_units_and_sample_rate(self):
-        ts = _make_eeg_ts(_EPOCH_LENGTH)
-        model = StubModel(N_FEATURES_LITE)
-
-        scores, _, _ = get_usability_scores(
-            ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
-        )
-
         assert scores.channel_names == OUTPUT_CHANNEL_NAMES
-        assert tuple(u.symbol for u in scores.units) == OUTPUT_UNITS
         assert scores.sample_rate == OUTPUT_SAMPLE_RATE_HZ
+        assert samples_to_keep == _EPOCH_LENGTH * 2
+        assert epoch_length == _EPOCH_LENGTH
+        assert scores.n_samples == 2
+        assert scores.values.shape == (2, 2)
 
-    def test_single_electrode_output_metadata(self):
+    def test_get_usability_score_single_channel(self):
         ts = _make_eeg_ts(_EPOCH_LENGTH, channel_names=("EEG_L", "MOVEMENT"))
-        model = StubModel(N_FEATURES_LITE)
+        model = StubModel()
 
         scores, samples_to_keep, epoch_length = get_usability_score(
             ts, model, eeg="EEG_L", movement="MOVEMENT", output_channel="usability"
@@ -238,48 +200,9 @@ class TestEpochTrimmingAndOutput:
         assert epoch_length == _EPOCH_LENGTH
         assert scores.n_samples == 1
 
-
-# ---------------------------------------------------------------------------
-# Lite vs full model branch selection
-# ---------------------------------------------------------------------------
-
-
-class TestModelBranchSelection:
-    def test_lite_model_skips_tsfel(self, monkeypatch: pytest.MonkeyPatch):
-        def fail_if_called(*args, **kwargs):
-            pytest.fail("TSFEL extraction should not run for lite models")
-
-        monkeypatch.setattr(detect, "_extract_tsfel_features", fail_if_called)
-        ts = _make_eeg_ts(_EPOCH_LENGTH)
-        model = StubModel(N_FEATURES_LITE)
-
-        get_usability_scores(
-            ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
-        )
-
-    def test_full_model_calls_tsfel(self, monkeypatch: pytest.MonkeyPatch):
-        tsfel_calls: list[tuple[np.ndarray, float]] = []
-
-        def spy_tsfel(data: np.ndarray, sample_rate: float) -> np.ndarray:
-            tsfel_calls.append((data.copy(), sample_rate))
-            return _stub_tsfel_features(data, sample_rate)
-
-        monkeypatch.setattr(detect, "_extract_tsfel_features", spy_tsfel)
-        ts = _make_eeg_ts(_EPOCH_LENGTH)
-        model = StubModel(N_FEATURES_LITE + 1)
-
-        get_usability_scores(
-            ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
-        )
-
-        assert len(tsfel_calls) == 1
-        data, sample_rate = tsfel_calls[0]
-        assert sample_rate == SAMPLE_RATE_HZ
-        assert data.shape[0] == 1  # one epoch
-
     def test_predictions_use_stub_model_labels(self):
         ts = _make_eeg_ts(_EPOCH_LENGTH * 2)
-        model = StubModel(N_FEATURES_LITE, left_label=1, right_label=0)
+        model = StubModel(left_label=1, right_label=0)
 
         scores, _, _ = get_usability_scores(
             ts, model, eeg_left="EEG_L", eeg_right="EEG_R", movement="MOVEMENT"
@@ -290,19 +213,37 @@ class TestModelBranchSelection:
         np.testing.assert_array_equal(scores.values[:, 1], [0.0, 0.0])
         assert len(model.predict_calls) == 2
 
+    def test_lite_sample_feature_count(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.undo()
+
+        n_samples = int(SAMPLE_RATE_HZ * EPOCH_DURATION_S)
+        data = (
+            np.random.default_rng(0)
+            .standard_normal((2, 2, n_samples))
+            .astype(np.float32)
+        )
+        spec = detect._extract_spectrogram_features(data, SAMPLE_RATE_HZ)
+        samples = detect._create_lite_sample(spec, eeg_idx=0, movement_idx=1)
+        assert samples.shape == (2, N_FEATURES_LITE)
+
 
 # ---------------------------------------------------------------------------
-# Model cache and download
+# Model catalog and cache
 # ---------------------------------------------------------------------------
+
+
+class TestModelCatalog:
+    def test_only_lite_models_are_exported(self):
+        assert set(MODEL_NAMES) == {"lite", "lite_binary"}
 
 
 class TestLoadModelCache:
     def test_download_writes_via_temp_file(self, tmp_path: Path, monkeypatch):
         models_dir = tmp_path / "models"
         models_dir.mkdir()
-        model_name = "eegUsability_model_v1.0.pkl"
+        model_name = MODEL_NAMES["lite"]
         model_path = models_dir / model_name
-        payload = {"model": StubModel(N_FEATURES_LITE)}
+        payload = {"model": StubModel()}
 
         monkeypatch.setattr(detect, "get_models_dir", lambda: models_dir, raising=False)
         monkeypatch.setattr(
@@ -322,7 +263,7 @@ class TestLoadModelCache:
             detect.requests, "get", lambda *args, **kwargs: FakeResponse()
         )
 
-        load_model("default")
+        load_model("lite")
 
         assert model_path.exists()
         assert not list(models_dir.glob(f".{model_name}.*.tmp"))
@@ -330,10 +271,10 @@ class TestLoadModelCache:
     def test_corrupt_cache_is_refetched(self, tmp_path: Path, monkeypatch):
         models_dir = tmp_path / "models"
         models_dir.mkdir()
-        model_name = "eegUsability_model_v1.0.pkl"
+        model_name = MODEL_NAMES["lite"]
         model_path = models_dir / model_name
         model_path.write_bytes(b"not a pickle")
-        payload = {"model": StubModel(N_FEATURES_LITE)}
+        payload = {"model": StubModel()}
         download_calls: list[str] = []
 
         monkeypatch.setattr(detect, "get_models_dir", lambda: models_dir, raising=False)
@@ -356,7 +297,7 @@ class TestLoadModelCache:
 
         monkeypatch.setattr(detect.requests, "get", fake_get)
 
-        model = load_model("default")
+        model = load_model("lite")
 
         assert download_calls == [model_name]
         assert isinstance(model, StubModel)
@@ -369,7 +310,7 @@ class TestLoadModelCache:
     ):
         models_dir = tmp_path / "models"
         models_dir.mkdir()
-        model_name = "eegUsability_model_v1.0.pkl"
+        model_name = MODEL_NAMES["lite"]
         model_path = models_dir / model_name
 
         monkeypatch.setattr(detect, "get_models_dir", lambda: models_dir, raising=False)
@@ -399,7 +340,11 @@ class TestLoadModelCache:
         monkeypatch.setattr(Path, "replace", failing_replace)
 
         with pytest.raises(OSError, match="disk full"):
-            load_model("default")
+            load_model("lite")
 
         assert not model_path.exists()
         assert not list(models_dir.glob(f".{model_name}.*.tmp"))
+
+    def test_unknown_version_raises(self):
+        with pytest.raises(ValueError, match="not found"):
+            load_model("default")

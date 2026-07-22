@@ -2,11 +2,11 @@
 
 `somnio.tasks.eeg_usability` scores sleep EEG recordings for data usability —
 detecting artifact-contaminated segments such as high noise, spiky noise, and
-M-shaped noise. It wraps the **eegUsability** machine-learning models from
-[eegFloss](https://github.com/Niloy333/eegFloss).
+M-shaped noise. It wraps the **eegUsability lite** machine-learning models from
+[eegFloss](https://github.com/Niloy333/eegFloss) (spectrogram features only).
 
-Somnio reimplements the eegFloss feature-extraction and scoring pipeline as a
-library API around :class:`~somnio.data.timeseries.TimeSeries`. Pre-trained
+Somnio reimplements the eegFloss lite feature-extraction and scoring pipeline as
+a library API around :class:`~somnio.data.timeseries.TimeSeries`. Pre-trained
 model weights are downloaded on first use from the same distribution used by
 eegFloss.
 
@@ -30,7 +30,7 @@ scored in **10-second epochs** (0.1 Hz output).
 ```python
 from somnio.tasks.eeg_usability import get_usability_scores, load_model
 
-model = load_model("default")  # downloads on first use
+model = load_model("lite")  # downloads on first use
 
 scores, samples_to_keep, epoch_length = get_usability_scores(
     ts,
@@ -45,14 +45,16 @@ For a single electrode, use :func:`~somnio.tasks.eeg_usability.get_usability_sco
 
 ## Models
 
+Only spectrogram-based (*lite*) models are supported:
+
 | Version key | eegFloss name | Notes |
 |---|---|---|
-| `default` | v1.0 | General-purpose; recommended |
-| `lite` | v0.7 | Spectrogram features only; faster |
-| `binary` | v0.6 | Usable vs. not usable |
-| `lite_binary` | v0.7.3 | Fast binary model |
+| `lite` (default) | v0.7 | Multiclass usability labels; recommended |
+| `lite_binary` | v0.7.3 | Usable vs. not usable |
 
 Pass the version key to :func:`~somnio.tasks.eeg_usability.load_model`.
+
+Full eegFloss models that require TSFEL statistical features are not supported.
 
 ## Attribution
 
@@ -90,8 +92,8 @@ If you use this functionality in academic work, please cite:
 
 Example methods text:
 
-> EEG usability scores were computed with the eegUsability models from eegFloss
-> (Sikder et al., 2025), accessed via the Somnio Python library.
+> EEG usability scores were computed with the eegUsability lite models from
+> eegFloss (Sikder et al., 2025), accessed via the Somnio Python library.
 
 ## Further reading
 

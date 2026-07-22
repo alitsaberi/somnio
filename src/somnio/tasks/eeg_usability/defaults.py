@@ -14,15 +14,12 @@ OUTPUT_CHANNEL_NAMES: tuple[str, str] = ("usability_left", "usability_right")
 OUTPUT_UNITS: tuple[str, str] = ("1", "1")
 OUTPUT_SAMPLE_RATE_HZ: float = 1.0 / EPOCH_DURATION_S
 
-# Feature dimensions used to select lite vs full model branches
-N_FEATURES_TSFEL: int = 36 + 18 + 336
+# Lite models use spectrogram features only (no TSFEL).
 N_FEATURES_LITE: int = 2838
 
-# Pre-trained model artifacts
+# Pre-trained lite model artifacts from eegFloss
 MODEL_NAMES: dict[str, str] = {
-    "default": "eegUsability_model_v1.0.pkl",
     "lite": "eegUsability_model_v0.7_lite.pkl",
-    "binary": "eegUsability_model_v0.6_binary.pkl",
     "lite_binary": "eegUsability_model_v0.7.3_lite_binary.pkl",
 }
 MODELS_INFO_URL: str = (
