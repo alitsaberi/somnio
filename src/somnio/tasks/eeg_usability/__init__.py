@@ -1,6 +1,7 @@
 """EEG usability scoring task.
 
-Predicts left/right EEG usability labels from 256 Hz EEG and movement data.
+Predicts left/right EEG usability labels from 256 Hz EEG and movement data
+using eegFloss *lite* (spectrogram-only) models.
 
 Derived from the eegUsability models in `eegFloss
 <https://github.com/Niloy333/eegFloss>`_.
@@ -11,7 +12,6 @@ from somnio.tasks.eeg_usability.defaults import (
     MODEL_NAMES,
     MODELS_INFO_URL,
     N_FEATURES_LITE,
-    N_FEATURES_TSFEL,
     OUTPUT_CHANNEL_NAMES,
     OUTPUT_SAMPLE_RATE_HZ,
     OUTPUT_UNITS,
@@ -29,7 +29,6 @@ __all__ = [
     "MODEL_NAMES",
     "MODELS_INFO_URL",
     "N_FEATURES_LITE",
-    "N_FEATURES_TSFEL",
     "OUTPUT_CHANNEL_NAMES",
     "OUTPUT_SAMPLE_RATE_HZ",
     "OUTPUT_UNITS",

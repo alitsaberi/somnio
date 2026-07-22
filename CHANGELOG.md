@@ -12,7 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ### Added
 
-- **`somnio.tasks.eeg_usability`**: EEG usability scoring from EEG and movement data (optional extra `eeg-usability`: `requests`, `scipy`, `tsfel`, `joblib`, `platformdirs`).
+- **`somnio.tasks.eeg_usability`**: EEG usability scoring from EEG and movement data using eegFloss *lite* (spectrogram-only) models (optional extra `eeg-usability`: `requests`, `scipy`, `platformdirs`, `lightgbm`). Full TSFEL-based models are not supported.
 
 ## [0.2.0b1] - 2026-06-02
 
