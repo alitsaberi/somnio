@@ -6,13 +6,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
-### Changed
+## [0.2.0b2] - 2026-07-22
 
-- **`somnio.tasks.eye_movement`** renamed to **`somnio.tasks.eye_movement_detection`**.
+Beta pre-release after 0.2.0b1. Adds EEG usability scoring, renames the eye-movement task module, and hardens sleep-scoring ONNX output checks. Documentation and test coverage for sleep scoring are still incomplete.
 
 ### Added
 
 - **`somnio.tasks.eeg_usability`**: EEG usability scoring from EEG and movement data using eegFloss *lite* (spectrogram-only) models (optional extra `eeg-usability`: `requests`, `scipy`, `platformdirs`, `lightgbm`). Full TSFEL-based models are not supported.
+
+### Changed
+
+- **`somnio.tasks.eye_movement`** renamed to **`somnio.tasks.eye_movement_detection`**.
+
+### Fixed
+
+- **`somnio.tasks.sleep_scoring`**: ONNX output verification accepts 3D and 4D logit layouts and reports clearer dimension mismatches.
+
+### Documentation
+
+- User guide for EEG usability; getting-started extras matrix updated for `eeg-usability`.
 
 ## [0.2.0b1] - 2026-06-02
 
@@ -56,6 +68,7 @@ First public release on PyPI (`somnio` 0.1.0, Python ≥ 3.10). Core dependency:
 
 - MkDocs (Material) site, including user guide, reference material, and CLI documentation; published at the URL in `project.urls` → Documentation.
 
-[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0b1...HEAD
+[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0b2...HEAD
+[0.2.0b2]: https://github.com/alitsaberi/somnio/compare/v0.2.0b1...v0.2.0b2
 [0.2.0b1]: https://github.com/alitsaberi/somnio/compare/v0.1.0...v0.2.0b1
 [0.1.0]: https://github.com/alitsaberi/somnio/releases/tag/v0.1.0
