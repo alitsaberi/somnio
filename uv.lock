@@ -1977,7 +1977,7 @@ wheels = [
 
 [[package]]
 name = "somnio"
-version = "0.2.0b2"
+version = "0.2.0b3"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },

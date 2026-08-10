@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.2.0b3] - 2026-08-10
+
+Beta pre-release after 0.2.0b2. Fixes low-cutoff FIR filtering so baseline drift is actually attenuated, and unifies filtering behind a single `apply_filter` API with FIR and IIR (Butterworth) methods.
+
+### Added
+
+- **`somnio.transforms.filter.apply_filter`**: Unified zero-phase filtering with `method="fir"` or `method="iir"` (Butterworth via SciPy SOS). Aliases: `apply_fir_filter`, `apply_butterworth_filter`.
+
+### Fixed
+
+- **`somnio.transforms.filter`**: FIR length is derived from transition bandwidth (MNE-like) instead of a fixed ~1 s window, so cutoffs ≲ 1 Hz (e.g. 0.3 Hz high-pass/bandpass) meaningfully attenuate slow drift. Too-short signals raise a clear error instead of silently using a useless short filter.
+
 ## [0.2.0b2] - 2026-07-22
 
 Beta pre-release after 0.2.0b1. Adds EEG usability scoring, renames the eye-movement task module, and hardens sleep-scoring ONNX output checks. Documentation and test coverage for sleep scoring are still incomplete.
@@ -68,7 +80,8 @@ First public release on PyPI (`somnio` 0.1.0, Python ≥ 3.10). Core dependency:
 
 - MkDocs (Material) site, including user guide, reference material, and CLI documentation; published at the URL in `project.urls` → Documentation.
 
-[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0b2...HEAD
+[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0b3...HEAD
+[0.2.0b3]: https://github.com/alitsaberi/somnio/compare/v0.2.0b2...v0.2.0b3
 [0.2.0b2]: https://github.com/alitsaberi/somnio/compare/v0.2.0b1...v0.2.0b2
 [0.2.0b1]: https://github.com/alitsaberi/somnio/compare/v0.1.0...v0.2.0b1
 [0.1.0]: https://github.com/alitsaberi/somnio/releases/tag/v0.1.0
