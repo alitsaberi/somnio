@@ -13,7 +13,6 @@ from somnio.transforms.filter import (
     apply_fir_filter,
 )
 
-
 FS = 128.0
 DURATION_S = 180.0  # 3 minutes — long enough for a 0.3 Hz FIR
 
