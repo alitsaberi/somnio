@@ -1,6 +1,6 @@
 [project]
 name = "somnio"
-version = "0.2.0b2"
+version = "0.2.0b3"
 description = "Python library and CLI for sleep and physiological data workflows."
 readme = "README.md"
 authors = [
