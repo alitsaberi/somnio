@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.2.0b4] - 2026-09-04
+
+Beta pre-release after 0.2.0b3. Adds TLS verification controls for `download-nsrr` so downloads can succeed when sleepdata.org presents an incomplete certificate chain.
+
 ### Added
 
 - **`download-nsrr`**: `--verify/--no-verify` and `--ca-bundle` options for TLS certificate verification (sleepdata.org currently sends an incomplete chain).
@@ -88,7 +92,8 @@ First public release on PyPI (`somnio` 0.1.0, Python ≥ 3.10). Core dependency:
 
 - MkDocs (Material) site, including user guide, reference material, and CLI documentation; published at the URL in `project.urls` → Documentation.
 
-[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0b3...HEAD
+[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0b4...HEAD
+[0.2.0b4]: https://github.com/alitsaberi/somnio/compare/v0.2.0b3...v0.2.0b4
 [0.2.0b3]: https://github.com/alitsaberi/somnio/compare/v0.2.0b2...v0.2.0b3
 [0.2.0b2]: https://github.com/alitsaberi/somnio/compare/v0.2.0b1...v0.2.0b2
 [0.2.0b1]: https://github.com/alitsaberi/somnio/compare/v0.1.0...v0.2.0b1
