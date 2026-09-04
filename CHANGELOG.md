@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`download-nsrr`**: `--verify/--no-verify` and `--ca-bundle` options for TLS certificate verification (sleepdata.org currently sends an incomplete chain).
+
+### Documentation
+
+- User guide for `download-nsrr` covers TLS verification and custom CA bundles.
+
 ## [0.2.0b3] - 2026-08-10
 
 Beta pre-release after 0.2.0b2. Fixes low-cutoff FIR filtering so baseline drift is actually attenuated, and unifies filtering behind a single `apply_filter` API with FIR and IIR (Butterworth) methods.

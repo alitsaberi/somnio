@@ -65,13 +65,16 @@ def _fetch_directory_listing(
     token: str,
     path: str | None = None,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    verify: bool | str = True,
 ) -> list:
     """Fetch one level of the dataset file listing from the NSRR API."""
     base_url = f"https://sleepdata.org/api/v1/datasets/{slug}/files.json"
     params: dict[str, str] = {"auth_token": token}
     if path:
         params["path"] = path
-    response = session.get(base_url, params=params, timeout=timeout_seconds)
+    response = session.get(
+        base_url, params=params, timeout=timeout_seconds, verify=verify
+    )
     try:
         response.raise_for_status()
     except requests.HTTPError as e:
@@ -88,18 +91,29 @@ def _collect_all_files(
     token: str,
     path: str | None = None,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    verify: bool | str = True,
 ) -> list:
     """Recursively collect all file entries under the given path."""
     files: list[dict] = []
     items = _fetch_directory_listing(
-        session, slug, token, path, timeout_seconds=timeout_seconds
+        session,
+        slug,
+        token,
+        path,
+        timeout_seconds=timeout_seconds,
+        verify=verify,
     )
     for item in items:
         if item["is_file"]:
             files.append(item)
         else:
             files += _collect_all_files(
-                session, slug, token, item["full_path"], timeout_seconds=timeout_seconds
+                session,
+                slug,
+                token,
+                item["full_path"],
+                timeout_seconds=timeout_seconds,
+                verify=verify,
             )
     return files
 
@@ -111,6 +125,7 @@ def _download_file(
     file_obj: dict,
     base_dir: Path,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    verify: bool | str = True,
 ) -> None:
     """Download a single file from NSRR, creating parent dirs and skipping if complete."""
     download_url = (
@@ -131,7 +146,9 @@ def _download_file(
             return
 
     logger.debug("Downloading {}...", file_obj["full_path"])
-    with session.get(download_url, stream=True, timeout=timeout_seconds) as r:
+    with session.get(
+        download_url, stream=True, timeout=timeout_seconds, verify=verify
+    ) as r:
         r.raise_for_status()
         with local_path.open("wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
@@ -174,6 +191,16 @@ def download(
         "--http-retries",
         help="Retries for HTTP requests.",
     ),
+    verify: bool = typer.Option(
+        True,
+        "--verify/--no-verify",
+        help="Verify TLS certificates.",
+    ),
+    ca_bundle: Path | None = typer.Option(
+        None,
+        "--ca-bundle",
+        help="Optional CA bundle path (overrides default verify).",
+    ),
 ) -> None:
     """Download files from an NSRR dataset."""
 
@@ -181,10 +208,17 @@ def download(
         logger.error("Missing NSRR token. Set NSRR_TOKEN in .env or pass --token.")
         raise SystemExit(1)
 
+    verify_arg: bool | str = str(ca_bundle) if ca_bundle else verify
+
     session = _build_session(http_retries=http_retries)
     target_path = path.strip() if path else None
     all_files = _collect_all_files(
-        session, slug, token, target_path, timeout_seconds=timeout_seconds
+        session,
+        slug,
+        token,
+        target_path,
+        timeout_seconds=timeout_seconds,
+        verify=verify_arg,
     )
     logger.info("Found {} files under {!r}.", len(all_files), target_path or "(root)")
 
@@ -199,6 +233,7 @@ def download(
                     file_obj,
                     out,
                     timeout_seconds=timeout_seconds,
+                    verify=verify_arg,
                 )
                 break
             except DOWNLOAD_RETRY_EXCEPTIONS as e:
