@@ -76,3 +76,18 @@ somnio --log-file ./nsrr-debug.log download-nsrr shhs ./data --token YOUR_NSRR_T
 ### Retries and timeouts
 
 For flaky connections or slow networks, use `--timeout-seconds` to increase the per-request timeout. You can also tune `--download-retries` (retries per file on connection/read timeout) and `--http-retries` (retries for API requests). See the [CLI reference](../reference/cli.md) for defaults and details.
+
+### TLS verification
+
+sleepdata.org currently sends an incomplete TLS certificate chain, which can cause download failures with the default verify settings. Use either:
+
+- `--no-verify` to skip certificate verification (convenient for local downloads; less secure)
+- `--ca-bundle /path/to/bundle.pem` to supply a CA bundle that includes the missing intermediates (overrides `--verify` / `--no-verify`)
+
+```bash
+somnio download-nsrr sof ./data --token YOUR_NSRR_TOKEN --no-verify
+```
+
+```bash
+somnio download-nsrr sof ./data --token YOUR_NSRR_TOKEN --ca-bundle ./sleepdata-ca-bundle.pem
+```

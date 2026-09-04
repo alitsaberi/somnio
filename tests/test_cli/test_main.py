@@ -114,3 +114,5 @@ def test_download_nsrr_help() -> None:
     assert "timeout" in out
     assert "download-retries" in out or "download_retries" in out
     assert "http-retries" in out or "http_retries" in out
+    assert "--verify" in out or "--no-verify" in out
+    assert "--ca-bundle" in out or "ca-bundle" in out
