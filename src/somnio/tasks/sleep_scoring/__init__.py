@@ -1,4 +1,4 @@
-"""Sleep stage scoring pipelines (ONNX-first)."""
+"""Sleep stage scoring pipelines (ONNX / TensorFlow backends)."""
 
 from somnio.tasks.sleep_scoring.backend import SleepScoringBackend
 from somnio.tasks.sleep_scoring.score import (

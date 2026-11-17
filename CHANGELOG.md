@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+### Added
+
+- **`somnio.tasks.sleep_scoring`**: TensorFlow SavedModel backend (`TensorflowSleepScoringModel`, optional extra `tensorflow`) and support for U-Time dynamic / one-shot exports where `n_periods_per_window` is null. Shared `model.yaml` discovery for file and directory artifacts.
+
 ## [0.2.0b4] - 2026-09-04
 
 Beta pre-release after 0.2.0b3. Adds TLS verification controls for `download-nsrr` so downloads can succeed when sleepdata.org presents an incomplete certificate chain.

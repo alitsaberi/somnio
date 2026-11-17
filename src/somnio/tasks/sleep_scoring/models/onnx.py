@@ -7,6 +7,10 @@ from typing import Any
 
 import numpy as np
 
+from somnio.tasks.sleep_scoring.models.metadata import (
+    discover_metadata_path,
+    load_model_metadata,
+)
 from somnio.tasks.sleep_scoring.schema import ModelMetadata
 from somnio.utils.imports import MissingOptionalDependency
 
@@ -30,32 +34,6 @@ except ModuleNotFoundError as e:
         extra="onnx",
         purpose="ONNX sleep-scoring inference",
     ) from e
-
-
-def load_model_metadata(path: Path | str) -> ModelMetadata:
-    """Load and validate sidecar metadata from YAML (``.yaml`` / ``.yml``)."""
-
-    from somnio.schemas.yaml import load_yaml
-
-    raw = load_yaml(path)
-    return ModelMetadata.model_validate(raw)
-
-
-def _discover_metadata_path(model_path: Path) -> Path:
-    parent = model_path.parent
-    stem = model_path.stem
-    for name in (
-        f"{stem}.yaml",
-        f"{stem}.yml",
-    ):
-        candidate = parent / name
-        if candidate.is_file():
-            return candidate
-    raise FileNotFoundError(
-        f"No sidecar metadata found next to {model_path}. "
-        "Pass an explicit metadata path or add "
-        f"{stem}.yaml / metadata.yaml (or .yml)."
-    )
 
 
 def _resolve_io_names(
@@ -107,14 +85,24 @@ def _verify_nptc_input(
         raise ValueError(
             f"Expected 4D NPTC input for {input_name!r}, got rank {len(shape)} shape={shape!r}"
         )
+
+    p_meta = metadata.n_periods_per_window
+    p_onnx = _onnx_dim_as_int(shape[1])
+    if p_meta is None:
+        if p_onnx is not None:
+            raise ValueError(
+                f"Metadata n_periods_per_window is null (dynamic), but ONNX input "
+                f"axis P is fixed to {p_onnx}"
+            )
+    elif p_onnx is not None and p_onnx != p_meta:
+        raise ValueError(
+            f"Input axis P onnx dim {p_onnx} != metadata {p_meta}"
+        )
+
     for axis, meta_dim, label in zip(
-        shape[1:],
-        (
-            metadata.n_periods_per_window,
-            metadata.n_samples_per_period,
-            metadata.n_channels,
-        ),
-        ("P", "T", "C"),
+        shape[2:],
+        (metadata.n_samples_per_period, metadata.n_channels),
+        ("T", "C"),
         strict=True,
     ):
         onnx_i = _onnx_dim_as_int(axis)
@@ -143,6 +131,8 @@ def _verify_output_logits_dim(
             f"Output last dim {k} for {output_name!r} != len(class_labels) {n}"
         )
 
+    p_meta = metadata.n_periods_per_window
+
     if len(shape) == 4:
         t_pred = _onnx_dim_as_int(shape[-2])
         expected_t = metadata.n_predictions_per_period
@@ -152,19 +142,31 @@ def _verify_output_logits_dim(
                 f"n_samples_per_period // n_samples_per_prediction ({expected_t})"
             )
         p = _onnx_dim_as_int(shape[-3])
-        if p is not None and p != metadata.n_periods_per_window:
+        if p_meta is None:
+            if p is not None:
+                raise ValueError(
+                    f"Metadata n_periods_per_window is null (dynamic), but ONNX "
+                    f"output periods dim is fixed to {p}"
+                )
+        elif p is not None and p != p_meta:
             raise ValueError(
                 f"Output periods dim {p} for {output_name!r} != "
-                f"metadata n_periods_per_window {metadata.n_periods_per_window}"
+                f"metadata n_periods_per_window {p_meta}"
             )
         return
 
     if len(shape) == 3:
         p = _onnx_dim_as_int(shape[-2])
-        if p is not None and p != metadata.n_periods_per_window:
+        if p_meta is None:
+            if p is not None:
+                raise ValueError(
+                    f"Metadata n_periods_per_window is null (dynamic), but ONNX "
+                    f"output periods dim is fixed to {p}"
+                )
+        elif p is not None and p != p_meta:
             raise ValueError(
                 f"Output periods dim {p} for {output_name!r} != "
-                f"metadata n_periods_per_window {metadata.n_periods_per_window}"
+                f"metadata n_periods_per_window {p_meta}"
             )
         expected_t = metadata.n_predictions_per_period
         if expected_t != 1:
@@ -210,7 +212,7 @@ class OnnxSleepScoringModel:
         elif isinstance(metadata, (str, Path)):
             meta = load_model_metadata(metadata)
         elif metadata is None:
-            meta = load_model_metadata(_discover_metadata_path(model_path))
+            meta = load_model_metadata(discover_metadata_path(model_path))
         else:
             raise TypeError(
                 f"metadata must be ModelMetadata, path, or None, got {type(metadata)}"
@@ -260,7 +262,17 @@ class OnnxSleepScoringModel:
 
         p, t, c = x.shape[1], x.shape[2], x.shape[3]
         m = self._metadata
-        if (p, t, c) != (m.n_periods_per_window, m.n_samples_per_period, m.n_channels):
+        if m.n_periods_per_window is None:
+            if (t, c) != (m.n_samples_per_period, m.n_channels):
+                raise ValueError(
+                    f"Batch shape (T,C)=({t},{c}) != metadata "
+                    f"({m.n_samples_per_period}, {m.n_channels})"
+                )
+        elif (p, t, c) != (
+            m.n_periods_per_window,
+            m.n_samples_per_period,
+            m.n_channels,
+        ):
             raise ValueError(
                 f"Batch shape (P,T,C)=({p},{t},{c}) != metadata "
                 f"({m.n_periods_per_window}, {m.n_samples_per_period}, {m.n_channels})"
