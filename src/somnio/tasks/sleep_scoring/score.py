@@ -132,9 +132,13 @@ def score_sleep_stages(
     ``(n_batch, n_periods_per_window, n_predictions_per_period, n_classes)`` where
     ``n_predictions_per_period = n_samples_per_period // n_samples_per_prediction``.
 
+    When ``metadata.n_periods_per_window`` is ``None`` (dynamic / one-shot export),
+    windowing places the entire recording in a single batch and the period axis of
+    the prediction is taken from the actual batch shape.
+
     Args:
         ts: Input time-series, shape ``(n_samples, n_channels)``.
-        backend: Inference backend (e.g. ONNX).
+        backend: Inference backend (e.g. ONNX or TensorFlow).
         metadata: Model metadata describing windowing and class labels.
         timestamp_alignment: How to anchor each output period timestamp for the `TimeSeries` output.
         output: Which output to return:
@@ -160,7 +164,7 @@ def score_sleep_stages(
     bptk = _as_bptk(
         pred,
         n_batch=w.batches.shape[0],
-        n_periods_per_window=metadata.n_periods_per_window,
+        n_periods_per_window=int(w.batches.shape[1]),
         n_predictions_per_period=metadata.n_predictions_per_period,
         n_classes=len(metadata.class_labels),
     )

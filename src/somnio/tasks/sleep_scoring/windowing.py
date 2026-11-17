@@ -5,9 +5,12 @@ equal to ``n_samples_per_period``). **Trailing samples that do not fill a full
 period are not discarded**: the last period is **zero- or edge-padded** to
 ``n_samples_per_period`` so the tail of the recording is still scored.
 
-Batch slots that exist only to round up ``n_periods`` to a multiple of
-``n_periods_per_window`` are filled by repeating the last **real** period tensor
-and flagged in ``batch_slot_is_real_period``.
+When ``n_periods_per_window`` is set, batch slots that exist only to round up
+``n_periods`` to a multiple of ``n_periods_per_window`` are filled by repeating
+the last **real** period tensor and flagged in ``batch_slot_is_real_period``.
+
+When ``n_periods_per_window`` is ``None`` (dynamic / one-shot export), all periods
+are placed in a single batch of shape ``(1, n_periods, T, C)``.
 """
 
 from __future__ import annotations
@@ -104,27 +107,19 @@ def _pad_period_tail(
     return out, True
 
 
-def build_nptc_batches(
+def _slice_periods(
     time_series: TimeSeries,
     *,
-    n_periods_per_window: int,
     n_samples_per_period: int,
     n_channels: int,
     sample_rate_hz: float,
-    period_stride_samples: int | None = None,
-    partial_period_padding: Literal["edge", "constant"] = "edge",
-    partial_pad_value: float = 0.0,
-    batch_tail_padding: Literal["edge", "constant"] = "edge",
-    batch_tail_pad_value: float = 0.0,
-    timestamp_alignment: PeriodTimestampAlignment = PeriodTimestampAlignment.PERIOD_START,
-    sample_rate_tolerance_hz: float = 1e-3,
-) -> WindowingResult:
-    """Slice ``TimeSeries.values`` into NPTC batches.
-
-    Partial final periods are **padded**, not dropped. Incomplete **batches**
-    are padded by repeating the last real period (``edge``) or zeros (``constant``).
-    """
-    _require_positive("n_periods_per_window", n_periods_per_window)
+    period_stride_samples: int | None,
+    partial_period_padding: Literal["edge", "constant"],
+    partial_pad_value: float,
+    timestamp_alignment: PeriodTimestampAlignment,
+    sample_rate_tolerance_hz: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return periods ``(n_periods, T, C)``, starts, fully_obs, timestamps."""
     _require_positive("n_samples_per_period", n_samples_per_period)
     _require_positive("n_channels", n_channels)
     _require_positive("sample_rate_hz", sample_rate_hz)
@@ -174,13 +169,71 @@ def build_nptc_batches(
         fully_obs[i] = not had_tail_pad
         ts_out[i] = _period_anchor_ns(timestamps, int(s), e, timestamp_alignment)
 
+    return periods, starts, fully_obs, ts_out
+
+
+def build_nptc_batches(
+    time_series: TimeSeries,
+    *,
+    n_periods_per_window: int | None,
+    n_samples_per_period: int,
+    n_channels: int,
+    sample_rate_hz: float,
+    period_stride_samples: int | None = None,
+    partial_period_padding: Literal["edge", "constant"] = "edge",
+    partial_pad_value: float = 0.0,
+    batch_tail_padding: Literal["edge", "constant"] = "edge",
+    batch_tail_pad_value: float = 0.0,
+    timestamp_alignment: PeriodTimestampAlignment = PeriodTimestampAlignment.PERIOD_START,
+    sample_rate_tolerance_hz: float = 1e-3,
+) -> WindowingResult:
+    """Slice ``TimeSeries.values`` into NPTC batches.
+
+    Partial final periods are **padded**, not dropped. Incomplete **batches**
+    (fixed-window mode only) are padded by repeating the last real period
+    (``edge``) or zeros (``constant``).
+
+    When ``n_periods_per_window`` is ``None``, returns a single one-shot batch
+    ``(1, n_periods, T, C)`` with all slots real.
+    """
+    if n_periods_per_window is not None:
+        _require_positive("n_periods_per_window", n_periods_per_window)
+
+    periods, starts, fully_obs, ts_out = _slice_periods(
+        time_series,
+        n_samples_per_period=n_samples_per_period,
+        n_channels=n_channels,
+        sample_rate_hz=sample_rate_hz,
+        period_stride_samples=period_stride_samples,
+        partial_period_padding=partial_period_padding,
+        partial_pad_value=partial_pad_value,
+        timestamp_alignment=timestamp_alignment,
+        sample_rate_tolerance_hz=sample_rate_tolerance_hz,
+    )
+    n_periods = int(periods.shape[0])
+    periods_f32 = periods.astype(np.float32, copy=False)
+
+    if n_periods_per_window is None:
+        out_batches = periods_f32.reshape(
+            1, n_periods, n_samples_per_period, n_channels
+        )
+        slot_real = np.ones((1, n_periods), dtype=bool)
+        return WindowingResult(
+            batches=out_batches,
+            period_start_sample=starts,
+            period_timestamp_ns=ts_out,
+            period_is_fully_observed=fully_obs,
+            batch_slot_is_real_period=slot_real,
+            sample_rate_hz=float(sample_rate_hz),
+        )
+
     p = n_periods_per_window
     n_batch = (n_periods + p - 1) // p
     total_slots = n_batch * p
     batched = np.zeros(
         (total_slots, n_samples_per_period, n_channels), dtype=np.float32
     )
-    batched[:n_periods] = periods.astype(np.float32, copy=False)
+    batched[:n_periods] = periods_f32
 
     slot_real = np.zeros((n_batch, p), dtype=bool)
     slot_real.flat[:n_periods] = True

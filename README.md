@@ -18,6 +18,8 @@ Optional extras (install as `somnio[extra]` or `somnio[a,b]`):
 - `somnio[mne]` — MNE-based processing utilities
 - `somnio[edf]` — EDF I/O (`edfio`, plus `mne`)
 - `somnio[hdf5]` — `somnio.io.hdf5` layouts (requires [h5py](https://www.h5py.org/))
+- `somnio[onnx]` — ONNX Runtime sleep scoring (`onnxruntime`)
+- `somnio[tensorflow]` — TensorFlow SavedModel sleep scoring (`tensorflow`)
 
 With **uv**: `uv add somnio`, `uv add somnio --extra cli`, or `uv add somnio --extra hdf5`.
 

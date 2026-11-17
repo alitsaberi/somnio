@@ -1,4 +1,4 @@
-"""Sidecar metadata for sleep scoring models (ONNX)."""
+"""Sidecar metadata for sleep scoring models (ONNX / TensorFlow)."""
 
 from __future__ import annotations
 
@@ -33,10 +33,25 @@ class OnnxBindings(BaseModel):
     )
 
 
-class ModelMetadata(BaseModel):
-    """Validated sidecar next to ``.onnx``.
+class TensorflowBindings(BaseModel):
+    """Optional TensorFlow / Keras IO hints; omit and use model IO when unknown."""
 
-    Example:
+    model_config = ConfigDict(extra="forbid")
+
+    input_name: str | None = Field(
+        default=None,
+        description="Model input tensor name; default: first model input.",
+    )
+    output_name: str | None = Field(
+        default=None,
+        description="Model output tensor name; default: first model output.",
+    )
+
+
+class ModelMetadata(BaseModel):
+    """Validated sidecar next to an exported model artifact.
+
+    Example (fixed window):
     ```yaml
         sample_rate_hz: 128
         n_periods_per_window: 35
@@ -45,6 +60,16 @@ class ModelMetadata(BaseModel):
         n_channels: 1
         class_labels: [W, N1, N2, N3, REM]
         preprocessing: []
+    ```
+
+    Example (dynamic / one-shot; ``n_periods_per_window`` null):
+    ```yaml
+        sample_rate_hz: 128
+        n_periods_per_window: null
+        n_samples_per_period: 3840
+        n_samples_per_prediction: 3840
+        n_channels: 1
+        class_labels: [W, N1, N2, N3, REM]
     ```
     """
 
@@ -55,27 +80,29 @@ class ModelMetadata(BaseModel):
         gt=0,
         description="Sample rate (Hz) the model expects after preprocessing.",
     )
-    n_periods_per_window: int = Field(
+    n_periods_per_window: int | None = Field(
         ...,
-        ge=1,
-        description="ONNX input: periods along axis P (per batch item).",
+        description=(
+            "Input periods along axis P per batch item. "
+            "``null`` means variable-length one-shot (entire recording in one window)."
+        ),
     )
     n_samples_per_period: int = Field(
         ...,
         ge=1,
-        description="ONNX input: samples along axis T per period.",
+        description="Input samples along axis T per period.",
     )
     n_channels: int = Field(
         ...,
         ge=1,
-        description="ONNX input: size of channel axis C (last axis in NPTC).",
+        description="Input size of channel axis C (last axis in NPTC).",
     )
     n_samples_per_prediction: int = Field(
         ...,
         ge=1,
         description=(
             "Input samples aggregated into one prediction within a period. "
-            "ONNX output time axis length is "
+            "Output time axis length is "
             "``n_samples_per_period // n_samples_per_prediction``."
         ),
     )
@@ -90,15 +117,25 @@ class ModelMetadata(BaseModel):
     )
 
     onnx: OnnxBindings = Field(default_factory=OnnxBindings)
+    tensorflow: TensorflowBindings = Field(default_factory=TensorflowBindings)
 
     @property
     def n_predictions_per_period(self) -> int:
-        """Predictions along the ONNX output time axis for one input period."""
+        """Predictions along the output time axis for one input period."""
         return self.n_samples_per_period // self.n_samples_per_prediction
 
     def preprocessing_transform_specs(self) -> tuple[TransformSpec, ...]:
         """Runtime `TransformSpec` tuple for `preprocessing` (import-string targets)."""
         return tuple(step.to_runtime() for step in self.preprocessing)
+
+    @field_validator("n_periods_per_window")
+    @classmethod
+    def _n_periods_positive_or_none(cls, v: int | None) -> int | None:
+        if v is not None and v < 1:
+            raise ValueError(
+                f"n_periods_per_window must be >= 1 or null, got {v}"
+            )
+        return v
 
     @model_validator(mode="after")
     def _period_divisible_by_prediction_stride(self) -> ModelMetadata:

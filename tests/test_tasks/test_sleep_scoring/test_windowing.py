@@ -127,3 +127,46 @@ def test_build_from_metadata():
     r = build_nptc_batches_from_metadata(ts, md)
     assert r.batches.shape == (1, 2, 4, 1)
     assert r.sample_rate_hz == 128.0
+
+
+def test_dynamic_oneshot_single_batch():
+    ts = _mono_ts(10)
+    r = build_nptc_batches(
+        ts,
+        n_periods_per_window=None,
+        n_samples_per_period=4,
+        n_channels=1,
+        sample_rate_hz=128.0,
+        period_stride_samples=4,
+        partial_period_padding="edge",
+    )
+    assert r.batches.shape == (1, 3, 4, 1)
+    assert bool(np.all(r.batch_slot_is_real_period))
+    assert list(r.period_is_fully_observed) == [True, True, False]
+
+
+def test_dynamic_from_metadata():
+    md = ModelMetadata(
+        sample_rate_hz=128.0,
+        n_periods_per_window=None,
+        n_samples_per_period=4,
+        n_samples_per_prediction=4,
+        n_channels=1,
+        class_labels=["W", "N1", "N2", "N3", "REM"],
+    )
+    ts = _mono_ts(8)
+    r = build_nptc_batches_from_metadata(ts, md)
+    assert r.batches.shape == (1, 2, 4, 1)
+    assert bool(np.all(r.batch_slot_is_real_period))
+
+
+def test_rejects_non_positive_fixed_window():
+    ts = _mono_ts(8)
+    with pytest.raises(ValueError, match="n_periods_per_window"):
+        build_nptc_batches(
+            ts,
+            n_periods_per_window=0,
+            n_samples_per_period=4,
+            n_channels=1,
+            sample_rate_hz=128.0,
+        )

@@ -72,6 +72,10 @@ hdf5 = ["h5py>=3.8"]
 onnx = [
     "onnxruntime>=1.16",
 ]
+tensorflow = [
+    # No cp314 wheels yet
+    "tensorflow>=2.12; python_version < '3.14'",
+]
 eeg-usability = [
     "requests>=2.31.0",
     "scipy>=1.11",
