@@ -33,8 +33,8 @@ Somnio ships small optional extras so you can install only what you use:
 - `mne`: MNE-based processing utilities
 - `edf`: EDF I/O (`edfio`, plus `mne`)
 - `hdf5`: HDF5 layouts (`h5py`)
-- `onnx`: ONNX Runtime sleep-scoring backends (`onnxruntime`)
-- `tensorflow`: TensorFlow SavedModel sleep-scoring backends (`tensorflow`)
+- `onnx`: ONNX Runtime sleep-scoring backends (`onnxruntime`); see [Sleep scoring](user-guide/sleep-scoring.md)
+- `tensorflow`: TensorFlow SavedModel sleep-scoring backends (`tensorflow`); see [Sleep scoring](user-guide/sleep-scoring.md)
 - `eeg-usability`: EEG usability scoring from eegFloss *lite* models (`requests`, `scipy`, `platformdirs`, `lightgbm`); see [EEG usability](user-guide/eeg-usability.md)
 
 ### With pip

@@ -66,6 +66,7 @@ nav:
     - Download NSRR: user-guide/download-nsrr.md
     - Data Types: user-guide/data.md
     - EEG Usability: user-guide/eeg-usability.md
+    - Sleep Scoring: user-guide/sleep-scoring.md
   - Reference:
     - CLI: reference/cli.md
     - Data: reference/data.md

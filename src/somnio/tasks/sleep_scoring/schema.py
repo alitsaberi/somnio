@@ -113,7 +113,11 @@ class ModelMetadata(BaseModel):
     )
     preprocessing: list[TransformSchema] = Field(
         default_factory=list,
-        description="Preprocessing transforms to apply to the input data.",
+        description=(
+            "Reserved for future use. Accepted in sidecars for forward "
+            "compatibility but not applied by ``score_sleep_stages``; "
+            "preprocess the input ``TimeSeries`` before scoring."
+        ),
     )
 
     onnx: OnnxBindings = Field(default_factory=OnnxBindings)

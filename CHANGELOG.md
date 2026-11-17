@@ -6,9 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-17
+
+First non-beta release of the 0.2 line. Adds TensorFlow sleep-scoring backends and dynamic one-shot exports, and documents sleep scoring for production use.
+
 ### Added
 
-- **`somnio.tasks.sleep_scoring`**: TensorFlow SavedModel backend (`TensorflowSleepScoringModel`, optional extra `tensorflow`) and support for U-Time dynamic / one-shot exports where `n_periods_per_window` is null. Shared `model.yaml` discovery for file and directory artifacts.
+- **`somnio.tasks.sleep_scoring`**: TensorFlow SavedModel backend (`TensorflowSleepScoringModel`, optional extra `tensorflow`) and support for dynamic / one-shot exports where `n_periods_per_window` is null. Shared `model.yaml` discovery for file and directory artifacts.
+
+### Documentation
+
+- User guide for sleep scoring (ONNX and TensorFlow backends, fixed vs dynamic windows, outputs). Notes that `metadata.preprocessing` is reserved and not applied by `score_sleep_stages`.
 
 ## [0.2.0b4] - 2026-09-04
 
@@ -96,7 +104,8 @@ First public release on PyPI (`somnio` 0.1.0, Python ≥ 3.10). Core dependency:
 
 - MkDocs (Material) site, including user guide, reference material, and CLI documentation; published at the URL in `project.urls` → Documentation.
 
-[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0b4...HEAD
+[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/alitsaberi/somnio/compare/v0.2.0b4...v0.2.0
 [0.2.0b4]: https://github.com/alitsaberi/somnio/compare/v0.2.0b3...v0.2.0b4
 [0.2.0b3]: https://github.com/alitsaberi/somnio/compare/v0.2.0b2...v0.2.0b3
 [0.2.0b2]: https://github.com/alitsaberi/somnio/compare/v0.2.0b1...v0.2.0b2
