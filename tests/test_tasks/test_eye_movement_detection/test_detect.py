@@ -1,7 +1,7 @@
 """Tests for somnio.tasks.eye_movement_detection.detect.
 
-Requires the ``signal`` extra (SciPy).  All tests are skipped when SciPy is
-not installed so the default test suite stays light.
+Requires ``signal`` (SciPy) and ``mne`` (default preprocess FIR).  Skipped
+when either is missing so the default test suite stays light.
 """
 
 from __future__ import annotations
@@ -9,8 +9,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-# Skip the entire module when scipy is not available.
+# Skip the entire module when scipy or mne is not available.
 pytest.importorskip("scipy")
+pytest.importorskip("mne")
 
 from somnio.data.annotations import Event
 from somnio.data.timeseries import TimeSeries

@@ -52,7 +52,8 @@ signal = [
     "scipy>=1.11",
 ]
 mne = [
-    "mne>=1.5",
+    # >=1.10: scipy.special.sph_harm removed in SciPy 1.16+
+    "mne>=1.10",
 ]
 nsrr = [
     "requests>=2.31.0",
@@ -66,7 +67,7 @@ schemas = [
 ]
 edf = [
     "edfio>=0.4",
-    "mne>=1.5",
+    "mne>=1.10",
 ]
 hdf5 = ["h5py>=3.8"]
 onnx = [
@@ -106,7 +107,7 @@ lint = [
 test = [
     "pytest>=9.0.2",
     "h5py>=3.8",
-    "mne>=1.5",
+    "mne>=1.10",
     "edfio>=0.4",
 ]
 

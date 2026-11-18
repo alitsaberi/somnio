@@ -29,6 +29,14 @@ def test_resample_halves_rate():
     assert out.values.shape == (128, 1)
 
 
+def test_resample_upsample_integer_ratio():
+    ts = _sine(64.0, 128)
+    out = apply_resample(ts, 128.0)
+    assert out.sample_rate == 128.0
+    assert out.n_samples == 256
+    assert out.values.shape == (256, 1)
+
+
 def test_resample_noop_near_equal():
     ts = _sine(128.0, 64)
     out = apply_resample(ts, 128.0)
@@ -45,3 +53,9 @@ def test_resample_requires_sample_rate():
     )
     with pytest.raises(ValueError, match="sample_rate"):
         apply_resample(ts, 128.0)
+
+
+def test_resample_rejects_nonpositive_target_rate():
+    ts = _sine(128.0, 32)
+    with pytest.raises(ValueError, match="target_sample_rate_hz"):
+        apply_resample(ts, 0.0)

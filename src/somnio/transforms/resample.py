@@ -7,32 +7,42 @@ Requires the ``signal`` extra::
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 import numpy as np
 
 from somnio.data.timeseries import TimeSeries
 from somnio.utils.imports import MissingOptionalDependency
 
 try:
-    from scipy.signal import resample as scipy_resample
+    from scipy.signal import resample_poly
 except ModuleNotFoundError as exc:
     raise MissingOptionalDependency(
         "scipy", extra="signal", purpose="Resampling transforms"
     ) from exc
 
+# Cap for rationalizing target/source rate ratios for ``resample_poly``.
+_MAX_RATIO_DENOMINATOR = 1000
+
 
 def apply_resample(ts: TimeSeries, target_sample_rate_hz: float) -> TimeSeries:
-    """FFT resampling along time (uniform grid). Preserves first timestamp; spacing updates.
+    """Polyphase FIR resampling along time (uniform grid).
+
+    Uses :func:`scipy.signal.resample_poly` with a rational approximation of
+    ``target_sample_rate_hz / ts.sample_rate``. Preserves the first timestamp;
+    spacing updates to the target rate.
 
     Args:
         ts: Series with ``sample_rate`` set (required).
         target_sample_rate_hz: Desired sample rate in Hz.
 
     Returns:
-        New ``TimeSeries`` at ``target_sample_rate_hz`` with the same channel metadata,
-        or ``ts`` unchanged if rates are equal within ``1e-6`` Hz.
+        New ``TimeSeries`` at ``target_sample_rate_hz`` with the same channel
+        metadata, or ``ts`` unchanged if rates are equal within ``1e-6`` Hz.
 
     Raises:
-        ValueError: If ``target_sample_rate_hz <= 0`` or ``ts.sample_rate`` is ``None``.
+        ValueError: If ``target_sample_rate_hz <= 0`` or ``ts.sample_rate`` is
+            ``None``, or fewer than 2 samples.
     """
     if ts.sample_rate is None:
         raise ValueError(
@@ -51,8 +61,12 @@ def apply_resample(ts: TimeSeries, target_sample_rate_hz: float) -> TimeSeries:
     if n_in < 2:
         raise ValueError(f"need at least 2 samples to resample, got {n_in}")
 
-    n_out = max(2, int(round(n_in * target_sample_rate_hz / ts.sample_rate)))
-    new_values = scipy_resample(ts.values, n_out, axis=0)
+    ratio = Fraction(target_sample_rate_hz / float(ts.sample_rate)).limit_denominator(
+        _MAX_RATIO_DENOMINATOR
+    )
+    up, down = ratio.numerator, ratio.denominator
+    new_values = resample_poly(ts.values, up, down, axis=0)
+    n_out = int(new_values.shape[0])
     step_ns = int(round(1e9 / target_sample_rate_hz))
     new_timestamps = ts.timestamps[0] + np.arange(n_out, dtype=np.int64) * step_ns
 
