@@ -13,6 +13,8 @@ from somnio.transforms.filter import (
     apply_fir_filter,
 )
 
+pytest.importorskip("mne")
+
 FS = 128.0
 DURATION_S = 180.0  # 3 minutes — long enough for a 0.3 Hz FIR
 
@@ -149,12 +151,13 @@ def test_lowpass_and_bandstop_run(method):
     assert bs.values.shape == ts.values.shape
 
 
-def test_short_signal_raises_for_aggressive_fir_highpass():
-    # A few seconds is far too short for an auto 0.3 Hz FIR at 128 Hz.
+def test_short_signal_fir_still_runs_with_warning():
+    # MNE warns when the FIR is longer than the signal but still returns.
     n = int(FS * 5)
     ts = _make_ts(np.random.default_rng(0).standard_normal(n))
-    with pytest.raises(ValueError, match="too short"):
-        apply_filter(ts, low_cutoff=0.3, method="fir")
+    with pytest.warns(RuntimeWarning, match="(?i)filter"):
+        out = apply_filter(ts, low_cutoff=0.3, method="fir")
+    assert out.values.shape == ts.values.shape
 
 
 def test_short_signal_iir_still_works():
@@ -197,7 +200,25 @@ def test_unknown_method_raises():
         apply_filter(ts, low_cutoff=1.0, method="cheby")  # type: ignore[arg-type]
 
 
-def test_explicit_numtaps_too_long_raises():
-    ts = _make_ts(np.ones(100))
-    with pytest.raises(ValueError, match="numtaps"):
-        apply_filter(ts, high_cutoff=20.0, method="fir", numtaps=99)
+def test_explicit_numtaps_runs():
+    signal, _ = _drift_plus_tone(duration_s=30.0)
+    ts = _make_ts(signal)
+    out = apply_filter(ts, high_cutoff=20.0, method="fir", numtaps=99)
+    assert out.values.shape == ts.values.shape
+
+
+def test_matches_mne_filter_data_bandpass():
+    from mne.filter import filter_data
+
+    signal, _ = _drift_plus_tone()
+    ts = _make_ts(signal)
+    out = apply_filter(ts, low_cutoff=0.3, high_cutoff=35.0, method="fir")
+    expected = filter_data(
+        ts.values.T,
+        FS,
+        0.3,
+        35.0,
+        method="fir",
+        verbose=False,
+    ).T
+    np.testing.assert_allclose(out.values, expected, rtol=0.0, atol=1e-12)

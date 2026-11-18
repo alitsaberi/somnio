@@ -11,15 +11,15 @@ pip install somnio
 Optional extras (install as `somnio[extra]` or `somnio[a,b]`):
 
 - `somnio[cli]` — command-line tools
-- `somnio[nsrr]` — NSRR download helpers (pair with `cli` for the `download-nsrr` command)
-- `somnio[schemas]` — YAML schemas (`pydantic`, `pyyaml`)
-- `somnio[signal]` — SciPy-based signal processing utilities
-- `somnio[eeg-usability]` — EEG usability scoring (`somnio.tasks.eeg_usability`; `requests`, `scipy`, `platformdirs`, `lightgbm`)
-- `somnio[mne]` — MNE-based processing utilities
-- `somnio[edf]` — EDF I/O (`edfio`, plus `mne`)
-- `somnio[hdf5]` — `somnio.io.hdf5` layouts (requires [h5py](https://www.h5py.org/))
-- `somnio[onnx]` — ONNX Runtime sleep scoring (`onnxruntime`)
-- `somnio[tensorflow]` — TensorFlow SavedModel sleep scoring (`tensorflow`)
+- `somnio[nsrr]` — NSRR download helpers
+- `somnio[schemas]` — YAML schemas
+- `somnio[signal]` — SciPy-based signal processing (`resample`, etc.)
+- `somnio[mne]` — MNE-based processing (`apply_filter` via `mne.filter.filter_data`, adapters)
+- `somnio[eeg-usability]` — EEG usability scoring
+- `somnio[edf]` — EDF I/O
+- `somnio[hdf5]` — HDF5 layouts
+- `somnio[onnx]` — ONNX Runtime sleep scoring 
+- `somnio[tensorflow]` — TensorFlow sleep scoring
 
 With **uv**: `uv add somnio`, `uv add somnio --extra cli`, or `uv add somnio --extra hdf5`.
 

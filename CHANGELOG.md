@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+### Changed
+
+- **`somnio.transforms.filter.apply_filter`**: FIR/IIR filtering now uses
+  :func:`mne.filter.filter_data` (overlap-add FIR / Butterworth IIR) instead of
+  SciPy ``firwin`` + ``filtfilt``. This matches offline WU-Sleep / zmax-datasets
+  prep. Filtering requires the ``mne`` extra (``pip install 'somnio[mne]'``).
+- **`somnio.transforms.resample.apply_resample`**: uses polyphase FIR
+  (:func:`scipy.signal.resample_poly`) instead of FFT
+  (:func:`scipy.signal.resample`).
+- **Optional extras**: ``signal`` is SciPy-only again; ``mne`` covers MNE-backed
+  filtering and the MNE adapter (no longer pointed at ``edf``). ``edf`` still
+  pulls ``edfio`` + ``mne`` for EDF I/O.
+
 ## [0.2.0] - 2026-11-17
 
 First non-beta release of the 0.2 line. Adds TensorFlow sleep-scoring backends and dynamic one-shot exports, and documents sleep scoring for production use.

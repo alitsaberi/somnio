@@ -122,7 +122,7 @@ Batch a sequence of `Sample` objects into a `TimeSeries`.
 
 ## MNE adapter (optional)
 
-Module: `somnio.data.adapters.mne` (requires **`somnio[edf]`** or **`mne`** installed).
+Module: `somnio.data.adapters.mne` (requires **`somnio[mne]`**).
 
 | Function | Purpose |
 |----------|---------|

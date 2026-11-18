@@ -17,7 +17,7 @@ try:
 except ModuleNotFoundError as e:
     if e.name != "mne":
         raise
-    raise MissingOptionalDependency("mne", extra="edf", purpose="MNE adapter") from e
+    raise MissingOptionalDependency("mne", extra="mne", purpose="MNE adapter") from e
 
 
 _FIFF_TO_UNIT: Final[dict[int, Unit]] = {

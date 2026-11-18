@@ -1,8 +1,8 @@
 """Signal filtering transforms for TimeSeries data.
 
-Requires the ``signal`` extra (SciPy)::
+Requires the ``mne`` extra::
 
-    pip install 'somnio[signal]'
+    pip install 'somnio[mne]'
 """
 
 from __future__ import annotations
@@ -16,16 +16,13 @@ from somnio.data.timeseries import TimeSeries
 from somnio.utils.imports import MissingOptionalDependency
 
 try:
-    from scipy.signal import butter, filtfilt, firwin, sosfiltfilt
+    from mne.filter import filter_data
 except ModuleNotFoundError as exc:
     raise MissingOptionalDependency(
-        "scipy", extra="signal", purpose="Signal filtering transforms"
+        "mne", extra="mne", purpose="Signal filtering transforms"
     ) from exc
 
 logger = logging.getLogger(__name__)
-
-# Hamming + firwin: filter length ≈ 3.3 / (trans_bandwidth / fs) samples (MNE).
-_HAMMING_FIRWIN_FACTOR = 3.3
 
 FilterMethod = Literal["fir", "iir"]
 FilterType = Literal["highpass", "lowpass", "bandpass", "bandstop"]
@@ -83,14 +80,12 @@ def _validate_cutoffs(
 
 
 def _auto_l_trans_bandwidth(l_freq: float) -> float:
-    """MNE-like auto low-side transition bandwidth (Hz)."""
-    # min(max(0.25 * l_freq, 2.0), l_freq) keeps trans ≤ cutoff for very low
-    # l_freq (e.g. 0.3 Hz → 0.3 Hz) so the stopband remains reachable.
+    """MNE auto low-side transition bandwidth (Hz)."""
     return float(min(max(0.25 * l_freq, 2.0), l_freq))
 
 
 def _auto_h_trans_bandwidth(h_freq: float, nyquist: float) -> float:
-    """MNE-like auto high-side transition bandwidth (Hz)."""
+    """MNE auto high-side transition bandwidth (Hz)."""
     return float(min(max(0.25 * h_freq, 2.0), nyquist - h_freq))
 
 
@@ -111,197 +106,45 @@ def _resolve_trans_bandwidth(
     return float(value)
 
 
-def _transition_bandwidths(
+def _mne_trans_bandwidths(
     sample_rate: float,
     low_cutoff: float | None,
     high_cutoff: float | None,
-    filter_type: FilterType,
     l_trans_bandwidth: float | str,
     h_trans_bandwidth: float | str,
-) -> tuple[float | None, float | None, float]:
-    """Return ``(l_trans, h_trans, shortest_trans)`` in Hz for FIR design."""
-    nyquist = sample_rate / 2.0
-    l_trans: float | None = None
-    h_trans: float | None = None
+) -> tuple[float | str, float | str]:
+    """Resolve transition bandwidths for :func:`mne.filter.filter_data`.
 
-    # Auto rules key off the relevant edge frequency. For bandstop our API
-    # uses low_cutoff > high_cutoff; the ascending stop edges are
-    # (high_cutoff, low_cutoff).
-    if filter_type == "highpass":
-        assert low_cutoff is not None
-        l_trans = _resolve_trans_bandwidth(
-            l_trans_bandwidth,
-            name="l_trans_bandwidth",
-            auto_hz=_auto_l_trans_bandwidth(low_cutoff),
-        )
-    elif filter_type == "lowpass":
-        assert high_cutoff is not None
-        h_trans = _resolve_trans_bandwidth(
-            h_trans_bandwidth,
-            name="h_trans_bandwidth",
-            auto_hz=_auto_h_trans_bandwidth(high_cutoff, nyquist),
-        )
-    elif filter_type == "bandpass":
-        assert low_cutoff is not None and high_cutoff is not None
-        l_trans = _resolve_trans_bandwidth(
-            l_trans_bandwidth,
-            name="l_trans_bandwidth",
-            auto_hz=_auto_l_trans_bandwidth(low_cutoff),
-        )
-        h_trans = _resolve_trans_bandwidth(
-            h_trans_bandwidth,
-            name="h_trans_bandwidth",
-            auto_hz=_auto_h_trans_bandwidth(high_cutoff, nyquist),
-        )
-    else:
-        assert low_cutoff is not None and high_cutoff is not None
-        l_trans = _resolve_trans_bandwidth(
-            l_trans_bandwidth,
-            name="l_trans_bandwidth",
-            auto_hz=_auto_l_trans_bandwidth(high_cutoff),
-        )
-        h_trans = _resolve_trans_bandwidth(
-            h_trans_bandwidth,
-            name="h_trans_bandwidth",
-            auto_hz=_auto_h_trans_bandwidth(low_cutoff, nyquist),
-        )
-
-    widths = [w for w in (l_trans, h_trans) if w is not None]
-    if not widths:
-        raise ValueError("Internal error: no transition bandwidths resolved.")
-    return l_trans, h_trans, min(widths)
-
-
-def _max_fir_numtaps(n_samples: int) -> int:
-    """Largest odd FIR length that satisfies ``filtfilt`` padding constraints.
-
-    ``scipy.signal.filtfilt`` requires ``n_samples >= 3 * (numtaps - 1) + 1``
-    for the default padlen.
+    Band-stop with MNE's ``'auto'`` transition widths can fail FIR design for
+    common stop bands, so band-stop always gets concrete Hz values.
     """
-    # n >= 3*(N-1)+1  ⇒  N <= (n-1)//3 + 1
-    max_n = (n_samples - 1) // 3 + 1
-    if max_n % 2 == 0:
-        max_n -= 1
-    return max(max_n, 3)
-
-
-def _fir_numtaps_from_trans(
-    sample_rate: float,
-    n_samples: int,
-    trans_bandwidth: float,
-    numtaps: int | None,
-) -> int:
-    """Choose odd FIR length from transition bandwidth (or an explicit override)."""
-    max_n = _max_fir_numtaps(n_samples)
-    if max_n < 3:
-        raise ValueError(
-            f"Signal is too short for FIR filtering ({n_samples} samples); "
-            "need enough samples for filtfilt padding with at least 3 taps."
-        )
-
-    if numtaps is not None:
-        if numtaps < 3:
-            raise ValueError(f"numtaps must be >= 3, got {numtaps}.")
-        n = int(numtaps) | 1
-        if n > max_n:
-            raise ValueError(
-                f"Requested numtaps={numtaps} (using odd length {n}) exceeds the "
-                f"maximum {max_n} feasible for a signal of length {n_samples} "
-                f"(filtfilt requires n_samples >= 3*(numtaps-1)+1)."
-            )
-        return n
-
-    # numtaps ≈ factor * fs / trans_bandwidth (Hamming + firwin).
-    needed = int(np.ceil(_HAMMING_FIRWIN_FACTOR * sample_rate / trans_bandwidth))
-    needed |= 1  # odd length
-    needed = max(needed, 3)
-
-    if needed > max_n:
-        min_samples = 3 * (needed - 1) + 1
-        min_seconds = min_samples / sample_rate
-        raise ValueError(
-            f"Signal is too short for the requested FIR filter: need about "
-            f"{needed} taps (≈{_HAMMING_FIRWIN_FACTOR:.1f}*fs/trans_bandwidth "
-            f"with trans_bandwidth={trans_bandwidth:.4g} Hz), but only {max_n} "
-            f"taps fit in {n_samples} samples at {sample_rate:g} Hz. "
-            f"Provide at least ~{min_samples} samples (≈{min_seconds:.1f} s), "
-            f"widen the transition bandwidth, pass an explicit shorter numtaps, "
-            f'or use method="iir".'
-        )
-    return needed
-
-
-def _design_fir_coeffs(
-    sample_rate: float,
-    n_samples: int,
-    low_cutoff: float | None,
-    high_cutoff: float | None,
-    *,
-    numtaps: int | None = None,
-    l_trans_bandwidth: float | str = "auto",
-    h_trans_bandwidth: float | str = "auto",
-) -> tuple[FilterType, np.ndarray, int, float, float | None, float | None]:
-    """Design FIR coefficients; return type, coeffs, numtaps, and bandwidths."""
     filter_type = _classify_filter_type(low_cutoff, high_cutoff)
-    l_trans, h_trans, shortest = _transition_bandwidths(
-        sample_rate,
-        low_cutoff,
-        high_cutoff,
-        filter_type,
+    nyquist = sample_rate / 2.0
+
+    if filter_type != "bandstop":
+        return l_trans_bandwidth, h_trans_bandwidth
+
+    assert low_cutoff is not None and high_cutoff is not None
+    # Ascending stop edges are (high_cutoff, low_cutoff) when API has low > high.
+    # MNE FIR band-stop design is fragile with unequal auto transition widths
+    # (can request a shorter filter than the wider edge needs). Use a common
+    # width = min(auto_l, auto_h) unless the caller passed explicit values.
+    auto_l = _auto_l_trans_bandwidth(high_cutoff)
+    auto_h = _auto_h_trans_bandwidth(low_cutoff, nyquist)
+    common_auto = min(auto_l, auto_h)
+    if l_trans_bandwidth == "auto" and h_trans_bandwidth == "auto":
+        return common_auto, common_auto
+    l_trans = _resolve_trans_bandwidth(
         l_trans_bandwidth,
-        h_trans_bandwidth,
+        name="l_trans_bandwidth",
+        auto_hz=common_auto,
     )
-    n_taps = _fir_numtaps_from_trans(sample_rate, n_samples, shortest, numtaps)
-    nyq = sample_rate / 2.0
-
-    if filter_type == "bandpass":
-        assert low_cutoff is not None and high_cutoff is not None
-        coeffs = firwin(n_taps, [low_cutoff / nyq, high_cutoff / nyq], pass_zero=False)
-    elif filter_type == "bandstop":
-        assert low_cutoff is not None and high_cutoff is not None
-        coeffs = firwin(n_taps, [high_cutoff / nyq, low_cutoff / nyq], pass_zero=True)
-    elif filter_type == "highpass":
-        assert low_cutoff is not None
-        coeffs = firwin(n_taps, low_cutoff / nyq, pass_zero=False)
-    else:
-        assert high_cutoff is not None
-        coeffs = firwin(n_taps, high_cutoff / nyq, pass_zero=True)
-
-    return filter_type, coeffs, n_taps, shortest, l_trans, h_trans
-
-
-def _design_butterworth_sos(
-    sample_rate: float,
-    low_cutoff: float | None,
-    high_cutoff: float | None,
-    order: int,
-) -> tuple[FilterType, np.ndarray]:
-    """Design a Butterworth SOS matrix for zero-phase ``sosfiltfilt``."""
-    if order < 1:
-        raise ValueError(f"order must be >= 1, got {order}.")
-
-    filter_type = _classify_filter_type(low_cutoff, high_cutoff)
-    nyq = sample_rate / 2.0
-
-    if filter_type == "bandpass":
-        assert low_cutoff is not None and high_cutoff is not None
-        wn = [low_cutoff / nyq, high_cutoff / nyq]
-        btype = "bandpass"
-    elif filter_type == "bandstop":
-        assert low_cutoff is not None and high_cutoff is not None
-        wn = [high_cutoff / nyq, low_cutoff / nyq]
-        btype = "bandstop"
-    elif filter_type == "highpass":
-        assert low_cutoff is not None
-        wn = low_cutoff / nyq
-        btype = "highpass"
-    else:
-        assert high_cutoff is not None
-        wn = high_cutoff / nyq
-        btype = "lowpass"
-
-    sos = butter(order, wn, btype=btype, output="sos")
-    return filter_type, sos
+    h_trans = _resolve_trans_bandwidth(
+        h_trans_bandwidth,
+        name="h_trans_bandwidth",
+        auto_hz=common_auto,
+    )
+    return l_trans, h_trans
 
 
 def _require_sample_rate(ts: TimeSeries) -> float:
@@ -315,7 +158,7 @@ def _require_sample_rate(ts: TimeSeries) -> float:
 
 def _filtered_timeseries(ts: TimeSeries, filtered_values: np.ndarray) -> TimeSeries:
     return TimeSeries(
-        values=np.asarray(filtered_values),
+        values=np.asarray(filtered_values, dtype=np.float64),
         timestamps=ts.timestamps.copy(),
         channel_names=list(ts.channel_names),
         units=list(ts.units),
@@ -334,9 +177,9 @@ def apply_filter(
     h_trans_bandwidth: float | str = "auto",
     order: int = 4,
 ) -> TimeSeries:
-    """Apply a zero-phase FIR or IIR filter to all channels.
+    """Apply a zero-phase FIR or IIR filter to all channels via MNE.
 
-    The filter type is determined by which cutoffs are provided:
+    Cutoff convention matches :func:`mne.filter.filter_data`:
 
     * Both ``None`` — the original TimeSeries is returned unchanged.
     * ``low_cutoff`` only — **highpass** filter.
@@ -345,28 +188,20 @@ def apply_filter(
     * ``low_cutoff > high_cutoff`` — **bandstop** filter (stop band between
       ``high_cutoff`` and ``low_cutoff``).
 
-    **FIR** (``method="fir"``, default): length is derived from transition
-    bandwidth (MNE-like), not a fixed ~1 s window. Auto transition widths::
+    **FIR** (``method="fir"``, default): MNE overlap-add FIR with Hamming
+    ``firwin`` design and zero-phase delay compensation (same defaults as
+    offline WU-Sleep / zmax-datasets prep).
 
-        l_trans = min(max(0.25 * l_freq, 2.0), l_freq)
-        h_trans = min(max(0.25 * h_freq, 2.0), nyquist - h_freq)
-
-    and ``numtaps ≈ 3.3 * sample_rate / min(l_trans, h_trans)`` (odd, Hamming /
-    ``firwin``). For cutoffs ≲ 1 Hz this yields multi-second filters; if the
-    signal is too short to fit that length under ``filtfilt`` padding rules, a
-    :class:`ValueError` is raised. Prefer ``method="iir"`` when recordings are
-    short or cutoffs are very low.
-
-    **IIR** (``method="iir"``): zero-phase Butterworth via SciPy ``butter`` +
-    ``sosfiltfilt``, default ``order=4``.
+    **IIR** (``method="iir"``): MNE forward-backward Butterworth
+    (``iir_params`` with ``ftype="butter"``), default ``order=4``.
 
     Args:
         ts: Input time-series. ``ts.sample_rate`` must not be ``None``.
         low_cutoff: Lower cutoff frequency in Hz, or ``None``.
         high_cutoff: Upper cutoff frequency in Hz, or ``None``.
         method: ``"fir"`` or ``"iir"``.
-        numtaps: Explicit odd FIR length; ``None`` selects from transition
-            bandwidth. Ignored for IIR.
+        numtaps: Explicit FIR length in samples (passed to MNE as
+            ``filter_length``). ``None`` uses MNE ``"auto"``. Ignored for IIR.
         l_trans_bandwidth: Low-side FIR transition width in Hz, or ``"auto"``.
         h_trans_bandwidth: High-side FIR transition width in Hz, or ``"auto"``.
         order: IIR (Butterworth) filter order (default 4). Ignored for FIR.
@@ -377,57 +212,72 @@ def apply_filter(
 
     Raises:
         ValueError: If ``ts.sample_rate`` is ``None``, cutoffs are invalid /
-            equal / at or above Nyquist, ``method`` is unknown, or the signal
-            is too short for the designed FIR length.
+            equal / at or above Nyquist, or ``method`` is unknown.
     """
     if low_cutoff is None and high_cutoff is None:
         return ts
 
+    if method not in ("fir", "iir"):
+        raise ValueError(f"method must be 'fir' or 'iir', got {method!r}.")
+
     sample_rate = _require_sample_rate(ts)
     _validate_cutoffs(sample_rate, low_cutoff, high_cutoff)
+    filter_type = _classify_filter_type(low_cutoff, high_cutoff)
+
+    l_trans, h_trans = _mne_trans_bandwidths(
+        sample_rate,
+        low_cutoff,
+        high_cutoff,
+        l_trans_bandwidth,
+        h_trans_bandwidth,
+    )
+
+    # MNE expects shape (n_channels, n_times)
+    data = np.asarray(ts.values, dtype=np.float64).T
+    filter_kwargs: dict = {
+        "l_freq": low_cutoff,
+        "h_freq": high_cutoff,
+        "method": method,
+        "l_trans_bandwidth": l_trans,
+        "h_trans_bandwidth": h_trans,
+        "copy": True,
+        "verbose": False,
+    }
 
     if method == "fir":
-        filter_type, coeffs, n_taps, shortest, l_trans, h_trans = _design_fir_coeffs(
-            sample_rate,
-            ts.n_samples,
-            low_cutoff,
-            high_cutoff,
-            numtaps=numtaps,
-            l_trans_bandwidth=l_trans_bandwidth,
-            h_trans_bandwidth=h_trans_bandwidth,
-        )
-        filtered_values = filtfilt(coeffs, 1.0, ts.values, axis=0)
+        if numtaps is not None:
+            if numtaps < 3:
+                raise ValueError(f"numtaps must be >= 3, got {numtaps}.")
+            filter_kwargs["filter_length"] = int(numtaps)
+        filtered = filter_data(data, sample_rate, **filter_kwargs)
         logger.info(
-            "apply_filter(fir): %s [low=%s Hz, high=%s Hz] numtaps=%d "
-            "trans_bandwidth=%.4g Hz (l=%s, h=%s) on %d channel(s)",
+            "apply_filter(fir/mne): %s [low=%s Hz, high=%s Hz] "
+            "filter_length=%s trans=(%s, %s) on %d channel(s)",
             filter_type,
             low_cutoff,
             high_cutoff,
-            n_taps,
-            shortest,
+            filter_kwargs.get("filter_length", "auto"),
             l_trans,
             h_trans,
             ts.n_channels,
         )
-    elif method == "iir":
+    else:
         if numtaps is not None:
             logger.debug("apply_filter: numtaps=%s ignored for method='iir'", numtaps)
-        filter_type, sos = _design_butterworth_sos(
-            sample_rate, low_cutoff, high_cutoff, order
-        )
-        filtered_values = sosfiltfilt(sos, ts.values, axis=0)
+        if order < 1:
+            raise ValueError(f"order must be >= 1, got {order}.")
+        filter_kwargs["iir_params"] = {"order": int(order), "ftype": "butter"}
+        filtered = filter_data(data, sample_rate, **filter_kwargs)
         logger.info(
-            "apply_filter(iir): %s [low=%s Hz, high=%s Hz] order=%d on %d channel(s)",
+            "apply_filter(iir/mne): %s [low=%s Hz, high=%s Hz] order=%d on %d channel(s)",
             filter_type,
             low_cutoff,
             high_cutoff,
             order,
             ts.n_channels,
         )
-    else:
-        raise ValueError(f"method must be 'fir' or 'iir', got {method!r}.")
 
-    return _filtered_timeseries(ts, filtered_values)
+    return _filtered_timeseries(ts, filtered.T)
 
 
 def apply_fir_filter(
@@ -442,9 +292,7 @@ def apply_fir_filter(
     """Apply a zero-phase FIR filter (alias for :func:`apply_filter`).
 
     Kept for backward compatibility. New code should call
-    :func:`apply_filter` directly. FIR length is chosen from transition
-    bandwidth; see :func:`apply_filter` for details and the note about low
-    cutoffs ≲ 1 Hz.
+    :func:`apply_filter` directly.
     """
     return apply_filter(
         ts,
@@ -467,7 +315,7 @@ def apply_butterworth_filter(
     """Apply a zero-phase Butterworth IIR filter (alias for :func:`apply_filter`).
 
     Default ``order=4``. Prefer this (or ``method="iir"``) for cutoffs ≲ 1 Hz
-    when the recording may be too short for a long FIR.
+    when the recording may be short relative to a long FIR.
     """
     return apply_filter(
         ts,
