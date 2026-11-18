@@ -21,9 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - **`somnio.tasks.eye_movement_detection`**: default ``preprocess=True`` path
   lazily imports the MNE FIR filter; install ``somnio[signal,mne]`` for the
   full pipeline (``signal`` alone still works with ``preprocess=False``).
-- **Dependencies**: require ``mne>=1.10`` (SciPy 1.16+ removed ``sph_harm``).
-  Test workflow now syncs/runs with the matrix Python instead of
-  ``.python-version``.
+- **Dependencies**: require ``mne>=1.10`` (SciPy 1.16+ removed ``sph_harm``);
+  pin ``onnxruntime<1.24`` on Python 3.10 (no cp310 wheels thereafter). Dev
+  group ``requires-python`` matches the package (``>=3.10``). Test workflow
+  syncs/runs with the matrix Python instead of ``.python-version``.
 
 ## [0.2.0] - 2026-11-17
 

@@ -71,7 +71,9 @@ edf = [
 ]
 hdf5 = ["h5py>=3.8"]
 onnx = [
-    "onnxruntime>=1.16",
+    # 1.24+ dropped cp310 wheels
+    "onnxruntime>=1.16,<1.24; python_version < '3.11'",
+    "onnxruntime>=1.16; python_version >= '3.11'",
 ]
 tensorflow = [
     # No cp314 wheels yet
@@ -112,7 +114,7 @@ test = [
 ]
 
 [tool.uv.dependency-groups]
-dev = {requires-python = ">=3.12"}
+dev = {requires-python = ">=3.10"}
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
