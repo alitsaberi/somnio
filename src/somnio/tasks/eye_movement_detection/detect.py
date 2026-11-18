@@ -1,8 +1,12 @@
 """Primitive left/right eye-movement event detection.
 
-Requires the ``signal`` extra (SciPy)::
+Requires the ``signal`` extra (SciPy). Default preprocessing also needs the
+``mne`` extra for bandpass filtering::
 
-    pip install 'somnio[signal]'
+    pip install 'somnio[signal,mne]'
+
+Use ``preprocess=False`` if the EOG is already filtered and you only need
+``somnio[signal]``.
 """
 
 from __future__ import annotations
@@ -13,7 +17,6 @@ import numpy as np
 
 from somnio.data.annotations import Event
 from somnio.data.timeseries import TimeSeries
-from somnio.transforms.filter import apply_fir_filter
 from somnio.data.units import UV, convert_values
 from somnio.utils.imports import MissingOptionalDependency
 from somnio.tasks.eye_movement_detection.defaults import (
@@ -317,7 +320,8 @@ def detect_lr_eye_movements(
         left: Channel name for the left EOG electrode.
         right: Channel name for the right EOG electrode.
         preprocess: When ``True`` (default) apply a bandpass FIR filter before
-            detection.  Set to ``False`` if the signal is already filtered.
+            detection (requires the ``mne`` extra).  Set to ``False`` if the
+            signal is already filtered.
         min_peak_amplitude_uv: Minimum EOG amplitude at a peak in **µV**.
         max_peak_amplitude_uv: Maximum EOG amplitude at a peak in **µV**.
         min_peak_gap_s: Minimum gap between consecutive peaks in **seconds**.
@@ -357,7 +361,8 @@ def detect_lr_eye_movements(
     Raises:
         ValueError: If ``ts.channel_names`` is not exactly ``{left, right}``.
         ValueError: If ``ts.sample_rate`` is ``None``.
-        MissingOptionalDependency: If ``scipy`` is not installed.
+        MissingOptionalDependency: If ``scipy`` is not installed, or if
+            ``preprocess=True`` and ``mne`` is not installed.
     """
     if ts.sample_rate is None:
         raise ValueError(
@@ -373,6 +378,9 @@ def detect_lr_eye_movements(
 
     eog = ts.select_channels([left, right])
     if preprocess:
+        # Imported lazily so ``preprocess=False`` only needs ``somnio[signal]``.
+        from somnio.transforms.filter import apply_fir_filter
+
         eog = apply_fir_filter(eog, low_cutoff_hz, high_cutoff_hz)
 
     left_vals = convert_values(eog.values[:, 0], eog.units[0], UV)

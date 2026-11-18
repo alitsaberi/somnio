@@ -26,16 +26,16 @@ uv add somnio --extra cli --extra nsrr
 
 Somnio ships small optional extras so you can install only what you use:
 
-- `cli`: command-line interface (`typer`, `loguru`)
-- `nsrr`: NSRR download helpers (use with `cli`)
-- `schemas`: pipeline YAML/JSON schemas (`pydantic`, `pyyaml`)
-- `signal`: signal processing utilities used by detectors (SciPy)
-- `mne`: MNE-based processing utilities
-- `edf`: EDF I/O (`edfio`, plus `mne`)
-- `hdf5`: HDF5 layouts (`h5py`)
-- `onnx`: ONNX Runtime sleep-scoring backends (`onnxruntime`); see [Sleep scoring](user-guide/sleep-scoring.md)
-- `tensorflow`: TensorFlow SavedModel sleep-scoring backends (`tensorflow`); see [Sleep scoring](user-guide/sleep-scoring.md)
-- `eeg-usability`: EEG usability scoring from eegFloss *lite* models (`requests`, `scipy`, `platformdirs`, `lightgbm`); see [EEG usability](user-guide/eeg-usability.md)
+- `cli`: command-line interface
+- `nsrr`: NSRR download helpers
+- `schemas`: pipeline YAML schemas
+- `signal`: SciPy-based signal processing
+- `mne`: MNE-based processing
+- `edf`: EDF I/O
+- `hdf5`: HDF5 layouts
+- `onnx`: ONNX Runtime sleep scoring backends; see [Sleep scoring](user-guide/sleep-scoring.md)
+- `tensorflow`: TensorFlow sleep scoring backends; see [Sleep scoring](user-guide/sleep-scoring.md)
+- `eeg-usability`: EEG usability scoring from eegFloss *lite* models; see [EEG usability](user-guide/eeg-usability.md)
 
 ### With pip
 
@@ -55,10 +55,22 @@ For `download-nsrr`:
 pip install 'somnio[cli,nsrr]'
 ```
 
-For signal-processing detectors that require SciPy:
+For SciPy-based signal processing (`resample`, and other SciPy transforms):
 
 ```bash
 pip install somnio[signal]
+```
+
+For MNE-based filtering (`apply_filter`) and the MNE ↔ TimeSeries adapter:
+
+```bash
+pip install somnio[mne]
+```
+
+Eye-movement detection with default preprocessing needs both:
+
+```bash
+pip install 'somnio[signal,mne]'
 ```
 
 For HDF5 signal layouts (`somnio.io.hdf5`, native and USleep formats):
