@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-18
+
+MNE-backed filtering, polyphase resampling, and clearer optional extras. Install
+hints and CI packaging were updated for current SciPy / ONNX Runtime wheels.
+
 ### Changed
 
 - **`somnio.transforms.filter.apply_filter`**: FIR/IIR filtering now uses
@@ -124,7 +129,8 @@ First public release on PyPI (`somnio` 0.1.0, Python ≥ 3.10). Core dependency:
 
 - MkDocs (Material) site, including user guide, reference material, and CLI documentation; published at the URL in `project.urls` → Documentation.
 
-[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/alitsaberi/somnio/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/alitsaberi/somnio/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/alitsaberi/somnio/compare/v0.2.0b4...v0.2.0
 [0.2.0b4]: https://github.com/alitsaberi/somnio/compare/v0.2.0b3...v0.2.0b4
 [0.2.0b3]: https://github.com/alitsaberi/somnio/compare/v0.2.0b2...v0.2.0b3
