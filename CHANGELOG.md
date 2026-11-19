@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-19
+
+BDF channel-subset loading and a NextSense dual-ear CSV reader for offline
+device exports.
+
+### Added
+
+- **`somnio.io.edf.standard.read`**: optional ``channels`` argument to load a
+  subset of channels (open without preload, pick, then load). ``.bdf`` files
+  use :func:`mne.io.read_raw_bdf`; other extensions still use
+  :func:`mne.io.read_raw_edf`.
+- **`somnio.io.csv.nextsense`**: NextSense CSV layout reader
+  (``read`` / ``NextSenseCSVReader``) with optional channel picks, metadata and
+  channel listing helpers, and left/right dual-file merge into one
+  :class:`~somnio.data.timeseries.TimeSeries`.
+
 ## [0.3.0] - 2026-11-18
 
 MNE-backed filtering, polyphase resampling, and clearer optional extras. Install
